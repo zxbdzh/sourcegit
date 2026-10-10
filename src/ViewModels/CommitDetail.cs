@@ -163,6 +163,11 @@ namespace SourceGit.ViewModels
             _sharedData = sharedData ?? new CommitDetailSharedData();
             WebLinks = Models.CommitLink.Get(repo.Remotes);
         }
+        public Models.DiffOption CreateAIDiffOption(Models.Change change)
+        {
+            return new Models.DiffOption(_commit, change);
+        }
+
 
         public CommitDetail Clone()
         {

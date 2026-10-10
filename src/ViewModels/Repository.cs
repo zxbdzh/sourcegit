@@ -14,6 +14,8 @@ namespace SourceGit.ViewModels
 {
     public class Repository : ObservableObject, Models.IRepository
     {
+        public AIChatContext AIChat { get; }
+
         public bool IsBare
         {
             get;
@@ -431,6 +433,7 @@ namespace SourceGit.ViewModels
 
             _settings = Models.RepositorySettings.Get(_gitCommonDir);
             _uiStates = Models.RepositoryUIStates.Load(GitDir);
+            AIChat = new AIChatContext(FullPath);
         }
 
         public void Open()
@@ -456,6 +459,7 @@ namespace SourceGit.ViewModels
 
         public void Close()
         {
+            AIChat.ResetAIConversation();
             var commitMessage = _workingCopy.CommitMessage;
             if (!string.IsNullOrEmpty(commitMessage) && _workingCopy.InProgressContext != null)
                 File.WriteAllText(Path.Combine(GitDir, "MERGE_MSG"), commitMessage);

@@ -14,6 +14,131 @@ namespace SourceGit.AI
             _service = service;
         }
 
+
+        public async Task<string> ChatAsync(List<ChatMessage> messages, Action<string> onDelta, string repo, CancellationToken cancellation)
+        {
+            var chatClient = _service.GetChatClient();
+            if (chatClient == null)
+                throw new Exception("Failed to fetch available models from this service. Please check your configuration and try again.");
+
+            var options = new ChatCompletionOptions();
+            options.Tools.Add(ChatTools.ReadFile);
+            options.Tools.Add(ChatTools.Grep);
+#pragma warning disable OPENAI001
+            if (!_service.ReasoningEffortLevel.Equals(Options.IgnoredReasoningEffortLevel, StringComparison.OrdinalIgnoreCase))
+                options.ReasoningEffortLevel = new ChatReasoningEffortLevel(_service.ReasoningEffortLevel);
+#pragma warning restore OPENAI001
+
+            var log = new StringBuilder();
+            var answer = new StringBuilder();
+            void Publish()
+            {
+                if (onDelta == null)
+                    return;
+                if (log.Length == 0)
+                    onDelta(answer.ToString());
+                else if (answer.Length == 0)
+                    onDelta(log.ToString());
+                else
+                    onDelta(log + "\n" + answer);
+            }
+
+            for (var round = 0; round < 8; round++)
+            {
+                answer.Clear();
+                ChatFinishReason? finish = null;
+                var drafts = new Dictionary<int, ToolDraft>();
+
+                await foreach (var update in chatClient.CompleteChatStreamingAsync(messages, options, cancellation))
+                {
+                    if (update.FinishReason != null)
+                        finish = update.FinishReason;
+
+                    foreach (var part in update.ContentUpdate)
+                    {
+                        if (string.IsNullOrEmpty(part.Text))
+                            continue;
+                        answer.Append(part.Text);
+                        Publish();
+                    }
+
+                    foreach (var tool in update.ToolCallUpdates)
+                    {
+                        if (!drafts.TryGetValue(tool.Index, out var draft))
+                        {
+                            draft = new ToolDraft();
+                            drafts[tool.Index] = draft;
+                        }
+
+                        if (!string.IsNullOrEmpty(tool.ToolCallId))
+                            draft.Id = tool.ToolCallId;
+                        if (!string.IsNullOrEmpty(tool.FunctionName))
+                            draft.Name = tool.FunctionName;
+                        if (tool.FunctionArgumentsUpdate != null)
+                            draft.Args.Append(tool.FunctionArgumentsUpdate.ToString());
+                    }
+                }
+
+                if (finish == ChatFinishReason.ToolCalls || drafts.Count > 0)
+                {
+                    var calls = new List<ChatToolCall>();
+                    foreach (var draft in drafts.Values)
+                    {
+                        if (string.IsNullOrEmpty(draft.Id) || string.IsNullOrEmpty(draft.Name))
+                            continue;
+                        calls.Add(ChatToolCall.CreateFunctionToolCall(draft.Id, draft.Name, BinaryData.FromString(draft.Args.ToString())));
+                    }
+
+                    if (calls.Count == 0)
+                        throw new Exception("The model requested a tool call without arguments.");
+
+                    var assistant = new AssistantChatMessage(calls);
+                    if (answer.Length > 0)
+                        assistant.Content.Add(ChatMessageContentPart.CreateTextPart(answer.ToString()));
+                    messages.Add(assistant);
+                    // 保留工具调用前的说明，但展示用的工具日志不进入模型历史。
+                    if (answer.Length > 0)
+                        log.Append(answer).AppendLine().AppendLine();
+                    answer.Clear();
+                    foreach (var call in calls)
+                    {
+                        cancellation.ThrowIfCancellationRequested();
+                        var result = await ChatTools.ProcessAsync(call, repo, null, desc =>
+                        {
+                            log.Append("- ").Append(desc).AppendLine();
+                            Publish();
+                        }, cancellation);
+                        messages.Add(result);
+                    }
+
+                    continue;
+                }
+
+                if (finish == ChatFinishReason.Length)
+                    throw new Exception("The response was cut off because it reached the maximum length.");
+                if (finish == ChatFinishReason.ContentFilter)
+                    throw new Exception("The response was omitted due to a content filter flag.");
+                if (finish is not (null or ChatFinishReason.Stop))
+                    throw new Exception($"Unexpected chat completion status: {finish}.");
+
+                var response = answer.ToString().Trim();
+                if (string.IsNullOrEmpty(response))
+                    throw new Exception("The model returned an empty response.");
+
+                messages.Add(new AssistantChatMessage(response));
+                return log.Length == 0 ? response : (log + "\n" + response).Trim();
+            }
+
+            throw new Exception("The model exceeded the tool-call limit.");
+        }
+
+        private sealed class ToolDraft
+        {
+            public string Id;
+            public string Name;
+            public StringBuilder Args { get; } = new();
+        }
+
         public async Task GenerateCommitMessageAsync(string repo, string currentBranch, string changeList, string amendParent, Action<string> onUpdate, CancellationToken cancellation)
         {
             var chatClient = _service.GetChatClient();

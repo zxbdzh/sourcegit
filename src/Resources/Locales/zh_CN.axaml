@@ -400,6 +400,42 @@
   <x:String x:Key="Text.Diff.VisualLines.All" xml:space="preserve">显示完整文件</x:String>
   <x:String x:Key="Text.Diff.VisualLines.Decr" xml:space="preserve">减少可见的行数</x:String>
   <x:String x:Key="Text.Diff.VisualLines.Incr" xml:space="preserve">增加可见的行数</x:String>
+  <x:String x:Key="Text.Diff.AI" xml:space="preserve">AI变更对话</x:String>
+  <x:String x:Key="Text.Diff.AI.Clear" xml:space="preserve">清空对话</x:String>
+  <x:String x:Key="Text.Diff.AI.Configure" xml:space="preserve">请先在偏好设置中配置 OpenAI 兼容服务。</x:String>
+  <x:String x:Key="Text.Diff.AI.Empty" xml:space="preserve">针对当前文件差异提问。文本 diff 会发给所选服务，超过 12 万字符会截断。</x:String>
+  <x:String x:Key="Text.Diff.AI.Stop" xml:space="preserve">停止回答</x:String>
+  <x:String x:Key="Text.Diff.AI.Error" xml:space="preserve">请求失败： </x:String>
+  <x:String x:Key="Text.Diff.AI.Explain" xml:space="preserve">解释变更</x:String>
+  <x:String x:Key="Text.Diff.AI.Input" xml:space="preserve">询问 AI，或加入差异后一起分析</x:String>
+  <x:String x:Key="Text.Diff.AI.NoTextDiff" xml:space="preserve">当前差异没有可读取的文本内容。</x:String>
+  <x:String x:Key="Text.Diff.AI.PromptExplain" xml:space="preserve">请解释本条问题附带的差异的目的和对用户可见的影响，并尽可能引用具体改动。</x:String>
+  <x:String x:Key="Text.Diff.AI.PromptRisks" xml:space="preserve">请检查本条问题附带的差异中可能的错误、回归、安全问题或遗漏的边界情况。只报告能由差异内容支持的具体风险。</x:String>
+  <x:String x:Key="Text.Diff.AI.PromptTests" xml:space="preserve">请为本条问题附带的差异建议有针对性的测试，并说明每个测试需要验证什么。</x:String>
+  <x:String x:Key="Text.Diff.AI.Risks" xml:space="preserve">检查风险</x:String>
+  <x:String x:Key="Text.Diff.AI.Send" xml:space="preserve">发送</x:String>
+  <x:String x:Key="Text.Diff.AI.Tests" xml:space="preserve">建议测试</x:String>
+  <x:String x:Key="Text.Diff.AI.Thinking" xml:space="preserve">正在分析...</x:String>
+  <x:String x:Key="Text.Diff.AI.You" xml:space="preserve">你</x:String>
+  <x:String x:Key="Text.Diff.AI.Assistant" xml:space="preserve">AI</x:String>
+  <x:String x:Key="Text.AI.Sidebar" xml:space="preserve">AI 助手</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Close" xml:space="preserve">收起 AI 侧栏</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Follow" xml:space="preserve">跟随当前差异</x:String>
+  <x:String x:Key="Text.AI.Sidebar.NoCurrent" xml:space="preserve">当前没有可见的文本差异</x:String>
+  <x:String x:Key="Text.AI.Sidebar.SelectedCount" xml:space="preserve">已选 {0} 个变更</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Empty" xml:space="preserve">询问当前变更，或加入其他差异后一起分析。浏览文件不会发送请求；发送时附带差异，合计超过 12 万字符会截断。</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Context" xml:space="preserve">本条消息的上下文</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Current" xml:space="preserve">当前</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Pinned" xml:space="preserve">固定</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Remove" xml:space="preserve">移除差异附件</x:String>
+  <x:String x:Key="Text.AI.Sidebar.AddCurrent" xml:space="preserve">加入当前差异</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Add" xml:space="preserve">加入 AI</x:String>
+  <x:String x:Key="Text.AI.Sidebar.AddTip" xml:space="preserve">将当前完整文本差异固定为对话附件</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Keys" xml:space="preserve">Enter 发送 · Shift+Enter 换行</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Unstaged" xml:space="preserve">索引 → 工作副本 · 未暂存</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Staged" xml:space="preserve">HEAD → 索引 · 已暂存</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Truncated" xml:space="preserve">已截断</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Limit" xml:space="preserve">上下文达到上限，其余差异未发送</x:String>
   <x:String x:Key="Text.Diff.Welcome" xml:space="preserve">请选择需要对比的文件</x:String>
   <x:String x:Key="Text.DirHistories" xml:space="preserve">目录内容变更历史</x:String>
   <x:String x:Key="Text.DirtyState.HasLocalChanges" xml:space="preserve">未提交的本地变更</x:String>

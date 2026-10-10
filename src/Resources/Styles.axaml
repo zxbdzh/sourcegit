@@ -539,6 +539,41 @@
     <Setter Property="FontFamily" Value="{DynamicResource Fonts.Monospace}"/>
     <Setter Property="Foreground" Value="{DynamicResource Brush.InlineCodeFG}"/>
   </Style>
+  <Style Selector="Border.md_code">
+    <Setter Property="Background" Value="{DynamicResource Brush.InlineCode}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border2}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="8,6"/>
+    <Setter Property="Margin" Value="0,4,0,0"/>
+  </Style>
+  <Style Selector="Border.md_code TextBlock.md_code_text, Border.md_code SelectableTextBlock.md_code_text">
+    <Setter Property="FontFamily" Value="{DynamicResource Fonts.Monospace}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.InlineCodeFG}"/>
+  </Style>
+  <Style Selector="Border.md_table">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border2}"/>
+    <Setter Property="BorderThickness" Value="1,1,0,0"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="Margin" Value="0,4,0,0"/>
+  </Style>
+  <Style Selector="Border.md_th">
+    <Setter Property="Background" Value="{DynamicResource Brush.SubPanel}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border2}"/>
+    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+    <Setter Property="Padding" Value="8,5"/>
+  </Style>
+  <Style Selector="Border.md_td">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border2}"/>
+    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+    <Setter Property="Padding" Value="8,5"/>
+  </Style>
+  <Style Selector="Border.md_th TextBlock, Border.md_th SelectableTextBlock">
+    <Setter Property="FontWeight" Value="Bold"/>
+    <Setter Property="FontSize" Value="12"/>
+  </Style>
+  <Style Selector="Border.md_td TextBlock, Border.md_td SelectableTextBlock">
+    <Setter Property="FontSize" Value="12"/>
+  </Style>
 
   <Style Selector="TextBox">
     <Setter Property="CornerRadius" Value="0"/>

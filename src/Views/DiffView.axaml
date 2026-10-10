@@ -16,7 +16,7 @@
     <Grid RowDefinitions="26,*">
       <!-- Toolbar -->
       <Border Grid.Row="0" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Brush.Border2}">
-        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto">
           <!-- File Icon -->
           <Path Grid.Column="0" Width="12" Height="12" Data="{StaticResource Icons.File}" Margin="8,0,0,0"/>
 
@@ -56,7 +56,8 @@
                      TextTrimming="CharacterEllipsis"/>
 
           <!-- Toolbar Buttons -->
-          <StackPanel Grid.Column="4" Margin="8,0,0,0" Orientation="Horizontal" VerticalAlignment="Center">
+          <ScrollViewer x:Name="ToolbarActions" Grid.Column="4" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+          <StackPanel Margin="8,0,0,0" Orientation="Horizontal" VerticalAlignment="Center">
             <Button x:Name="BtnGotoFirstChange"
                     Classes="icon_button"
                     Width="28"
@@ -220,7 +221,13 @@
               </ToolTip.Tip>
               <Path Width="12" Height="12" Stretch="Uniform" Data="{StaticResource Icons.OpenWith}"/>
             </Button>
+
+
           </StackPanel>
+          </ScrollViewer>
+          <Button Grid.Column="5" x:Name="BtnAddDiffToAI" Classes="flat" Height="22" Padding="6,0" FontSize="11" Margin="4,0"
+                  Content="{DynamicResource Text.AI.Sidebar.Add}" IsVisible="{Binding IsTextDiff}" Click="OnAddDiffToAI"
+                  ToolTip.Tip="{DynamicResource Text.AI.Sidebar.AddTip}"/>
         </Grid>
       </Border>
 
@@ -424,6 +431,8 @@
           </DataTemplate>
         </ContentControl.DataTemplates>
       </ContentControl>
+
+
     </Grid>
   </Border>
 </UserControl>

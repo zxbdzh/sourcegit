@@ -396,6 +396,42 @@
   <x:String x:Key="Text.Diff.VisualLines.All" xml:space="preserve">Show All Lines</x:String>
   <x:String x:Key="Text.Diff.VisualLines.Decr" xml:space="preserve">Decrease Number of Visible Lines</x:String>
   <x:String x:Key="Text.Diff.VisualLines.Incr" xml:space="preserve">Increase Number of Visible Lines</x:String>
+  <x:String x:Key="Text.Diff.AI" xml:space="preserve">AI Diff Chat</x:String>
+  <x:String x:Key="Text.Diff.AI.Clear" xml:space="preserve">Clear conversation</x:String>
+  <x:String x:Key="Text.Diff.AI.Configure" xml:space="preserve">Configure an OpenAI-compatible service in Preferences to use diff chat.</x:String>
+  <x:String x:Key="Text.Diff.AI.Empty" xml:space="preserve">Ask about this file's changes. The text diff is sent to the selected AI service and truncated after 120,000 characters.</x:String>
+  <x:String x:Key="Text.Diff.AI.Stop" xml:space="preserve">Stop response</x:String>
+  <x:String x:Key="Text.Diff.AI.Error" xml:space="preserve">Request failed: </x:String>
+  <x:String x:Key="Text.Diff.AI.Explain" xml:space="preserve">Explain changes</x:String>
+  <x:String x:Key="Text.Diff.AI.Input" xml:space="preserve">Ask AI, or attach diffs to analyze together</x:String>
+  <x:String x:Key="Text.Diff.AI.NoTextDiff" xml:space="preserve">The current diff has no readable text content.</x:String>
+  <x:String x:Key="Text.Diff.AI.PromptExplain" xml:space="preserve">Explain the purpose and user-visible impact of the diffs attached to this question. Cite specific changed lines where possible.</x:String>
+  <x:String x:Key="Text.Diff.AI.PromptRisks" xml:space="preserve">Review the diffs attached to this question for likely bugs, regressions, security issues, or missing edge cases. Only report concrete risks supported by the diff.</x:String>
+  <x:String x:Key="Text.Diff.AI.PromptTests" xml:space="preserve">Suggest focused tests for the behavior changed in the diffs attached to this question. Explain what each test should verify.</x:String>
+  <x:String x:Key="Text.Diff.AI.Risks" xml:space="preserve">Check risks</x:String>
+  <x:String x:Key="Text.Diff.AI.Send" xml:space="preserve">Send</x:String>
+  <x:String x:Key="Text.Diff.AI.Tests" xml:space="preserve">Suggest tests</x:String>
+  <x:String x:Key="Text.Diff.AI.Thinking" xml:space="preserve">Analyzing...</x:String>
+  <x:String x:Key="Text.Diff.AI.You" xml:space="preserve">You</x:String>
+  <x:String x:Key="Text.Diff.AI.Assistant" xml:space="preserve">AI</x:String>
+  <x:String x:Key="Text.AI.Sidebar" xml:space="preserve">AI Assistant</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Close" xml:space="preserve">Close AI sidebar</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Follow" xml:space="preserve">Follow current diff</x:String>
+  <x:String x:Key="Text.AI.Sidebar.NoCurrent" xml:space="preserve">No visible text diff</x:String>
+  <x:String x:Key="Text.AI.Sidebar.SelectedCount" xml:space="preserve">{0} changes selected</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Empty" xml:space="preserve">Ask about the current change, or attach other diffs to analyze together. Browsing files does not send requests. Diffs are included when sending and truncated above 120,000 characters in total.</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Context" xml:space="preserve">Context for this message</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Current" xml:space="preserve">Current</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Pinned" xml:space="preserve">Pinned</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Remove" xml:space="preserve">Remove diff attachment</x:String>
+  <x:String x:Key="Text.AI.Sidebar.AddCurrent" xml:space="preserve">Attach current diff</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Add" xml:space="preserve">Add to AI</x:String>
+  <x:String x:Key="Text.AI.Sidebar.AddTip" xml:space="preserve">Pin the current full text diff as a chat attachment</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Keys" xml:space="preserve">Enter to send · Shift+Enter for newline</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Unstaged" xml:space="preserve">Index → Working tree · Unstaged</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Staged" xml:space="preserve">HEAD → Index · Staged</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Truncated" xml:space="preserve">Truncated</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Limit" xml:space="preserve">Context limit reached; remaining diffs were not sent</x:String>
   <x:String x:Key="Text.Diff.Welcome" xml:space="preserve">SELECT FILE TO VIEW CHANGES</x:String>
   <x:String x:Key="Text.DirHistories" xml:space="preserve">Dir History</x:String>
   <x:String x:Key="Text.DirtyState.HasLocalChanges" xml:space="preserve">Has Local Changes</x:String>

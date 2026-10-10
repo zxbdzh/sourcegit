@@ -14,6 +14,8 @@
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="49"/>
       <ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="{Binding AIChat.SidebarWidth, Mode=TwoWay}" MinWidth="{Binding AIChat.MinimumSidebarWidth}" MaxWidth="520"/>
     </Grid.ColumnDefinitions>
 
     <!-- Page Switcher -->
@@ -822,6 +824,13 @@
           </Grid>
         </Grid>
       </Border>
+    </Border>
+    <GridSplitter Grid.Column="2" Width="4" MinWidth="1" Background="Transparent" BorderThickness="1,0,0,0"
+                  BorderBrush="{DynamicResource Brush.Border0}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                  IsVisible="{Binding AIChat.IsExpanded}" Focusable="False"/>
+    <Border Grid.Column="3" Margin="0,0,4,4" BorderThickness="1" BorderBrush="{DynamicResource Brush.Border0}"
+            CornerRadius="4" ClipToBounds="True" IsVisible="{Binding AIChat.IsExpanded}">
+      <v:AIChatSidebar x:Name="AISidebar" DataContext="{Binding AIChat}"/>
     </Border>
   </Grid>
 </UserControl>

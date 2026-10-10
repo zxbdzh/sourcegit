@@ -126,6 +126,11 @@ namespace SourceGit.ViewModels
             UpdatePickableCommits();
             UpdateChanges();
         }
+        public Models.DiffOption CreateAIDiffOption(Models.Change change)
+        {
+            return new Models.DiffOption(_based, _to, change);
+        }
+
 
         public void NavigateTo(string commitSHA)
         {

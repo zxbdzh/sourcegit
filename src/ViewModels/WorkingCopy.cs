@@ -245,6 +245,11 @@ namespace SourceGit.ViewModels
         {
             _repo = repo;
         }
+        public Models.DiffOption CreateAIDiffOption(Models.Change change, bool isUnstaged)
+        {
+            return new Models.DiffOption(change, isUnstaged);
+        }
+
 
         public void SetData(List<Models.Change> changes)
         {

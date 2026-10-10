@@ -25,9 +25,12 @@ namespace SourceGit.Views
 
             var layout = ViewModels.Preferences.Instance.Layout;
             var width = grid.Bounds.Width;
-            var leftWidth = Math.Max(width - 304, 300);
-
-            if (layout.WorkingCopyLeftWidth.Value - leftWidth > 1.0)
+            // 侧栏缩窄工作区时适度缩小文件列，优先给代码对比留空间。
+            var compact = width < 774;
+            grid.ColumnDefinitions[0].MinWidth = compact ? 180 : 300;
+            grid.ColumnDefinitions[2].MinWidth = compact ? Math.Max(220, width - 204) : 470;
+            var leftWidth = Math.Max(grid.ColumnDefinitions[0].MinWidth, width - grid.ColumnDefinitions[2].MinWidth - 4);
+            if (layout.WorkingCopyLeftWidth.Value > leftWidth + 1.0)
                 layout.WorkingCopyLeftWidth = new GridLength(leftWidth, GridUnitType.Pixel);
         }
 

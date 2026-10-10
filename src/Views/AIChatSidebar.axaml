@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SourceGit.ViewModels"
+             xmlns:v="using:SourceGit.Views"
+             x:Class="SourceGit.Views.AIChatSidebar"
+             x:DataType="vm:AIChatContext">
+  <Grid RowDefinitions="36,Auto,28,*,Auto" Background="{DynamicResource Brush.Window}">
+    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Brush.Border0}">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="10,0,6,0">
+        <TextBlock Text="{DynamicResource Text.AI.Sidebar}" FontWeight="Bold" VerticalAlignment="Center"/>
+        <ComboBox Grid.Column="1" Height="24" MaxWidth="150" Margin="8,0" HorizontalAlignment="Right"
+                  ItemsSource="{Binding AIServices}" SelectedItem="{Binding SelectedAIService, Mode=TwoWay}"
+                  IsVisible="{Binding IsAIAvailable}" IsEnabled="{Binding !IsAIResponding}"
+                  ToolTip.Tip="{Binding AIModel}"/>
+        <Button Grid.Column="2" Classes="icon_button" Width="24" Command="{Binding ResetAIConversation}"
+                ToolTip.Tip="{DynamicResource Text.Diff.AI.Clear}">
+          <Path Width="12" Height="12" Data="{StaticResource Icons.Clear}"/>
+        </Button>
+        <Button Grid.Column="3" Classes="icon_button" Width="24" Command="{Binding CloseSidebar}"
+                ToolTip.Tip="{DynamicResource Text.AI.Sidebar.Close}">
+          <Path Width="12" Height="12" Data="{StaticResource Icons.Close}"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Brush.Border0}" Padding="10,7">
+      <StackPanel Spacing="4">
+        <CheckBox Content="{DynamicResource Text.AI.Sidebar.Follow}" IsChecked="{Binding FollowCurrentDiff, Mode=TwoWay}"/>
+        <TextBlock Text="{Binding CurrentSelectionLabel}" FontSize="11" Foreground="{DynamicResource Brush.FG2}"
+                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding CurrentSelectionTip}"/>
+        <TextBlock Text="{DynamicResource Text.AI.Sidebar.NoCurrent}" FontSize="11" Foreground="{DynamicResource Brush.FG2}"
+                   IsVisible="{Binding !HasCurrentDiffs}"/>
+        <TextBlock Text="{Binding AIStatus}" FontSize="11" Foreground="{DynamicResource Brush.FG2}" TextWrapping="Wrap"
+                   IsVisible="{Binding !IsAIAvailable}"/>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="2" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Brush.Border0}">
+      <StackPanel Orientation="Horizontal" Margin="6,0">
+        <Button Classes="flat" Height="22" Padding="8,0" FontSize="11" BorderThickness="0"
+                Content="{DynamicResource Text.Diff.AI.Explain}" Tag="{DynamicResource Text.Diff.AI.PromptExplain}"
+                IsEnabled="{Binding CanUseAI}" Click="OnAskAIShortcut"/>
+        <Button Classes="flat" Height="22" Padding="8,0" FontSize="11" BorderThickness="0"
+                Content="{DynamicResource Text.Diff.AI.Risks}" Tag="{DynamicResource Text.Diff.AI.PromptRisks}"
+                IsEnabled="{Binding CanUseAI}" Click="OnAskAIShortcut"/>
+        <Button Classes="flat" Height="22" Padding="8,0" FontSize="11" BorderThickness="0"
+                Content="{DynamicResource Text.Diff.AI.Tests}" Tag="{DynamicResource Text.Diff.AI.PromptTests}"
+                IsEnabled="{Binding CanUseAI}" Click="OnAskAIShortcut"/>
+      </StackPanel>
+    </Border>
+
+    <ScrollViewer x:Name="AIConversationScrollViewer" Grid.Row="3" Background="{DynamicResource Brush.Contents}"
+                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <Panel Margin="10,10">
+        <TextBlock Text="{DynamicResource Text.AI.Sidebar.Empty}" TextWrapping="Wrap" FontSize="12"
+                   Foreground="{DynamicResource Brush.FG2}" IsVisible="{Binding !HasAIConversation}"/>
+        <ItemsControl ItemsSource="{Binding AIMessages}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Spacing="14"/></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="vm:AIChatMessage">
+              <Grid>
+                <StackPanel IsVisible="{Binding IsUser}" Spacing="5">
+                  <TextBlock Text="{DynamicResource Text.Diff.AI.You}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Brush.FG2}"/>
+                  <Border Background="{DynamicResource Brush.SubPanel}" Padding="6,4" CornerRadius="3"
+                          IsVisible="{Binding Context, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{Binding Context}" FontSize="11" Foreground="{DynamicResource Brush.FG2}" TextWrapping="Wrap"/>
+                  </Border>
+                  <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel IsVisible="{Binding !IsUser}" Spacing="6">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Path Width="12" Height="12" Data="{StaticResource Icons.AIAssist}" Fill="{DynamicResource Brush.FG2}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource Text.Diff.AI.Assistant}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Brush.FG2}"/>
+                    <v:LoadingIcon Width="12" Height="12" IsVisible="{Binding IsPending}"/>
+                  </StackPanel>
+                  <TextBlock Text="{DynamicResource Text.Diff.AI.Thinking}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.FG2}" IsVisible="{Binding IsWaiting}"/>
+                  <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" Foreground="OrangeRed" IsVisible="{Binding IsError}"/>
+                  <v:MarkdownView Markdown="{Binding Text}" IsVisible="{Binding ShowMarkdown}"/>
+                </StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Panel>
+    </ScrollViewer>
+
+    <Border Grid.Row="4" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Brush.Border0}" Padding="10,8">
+      <StackPanel Spacing="6">
+        <TextBlock Text="{DynamicResource Text.AI.Sidebar.Context}" FontSize="11" Foreground="{DynamicResource Brush.FG2}"/>
+        <ScrollViewer MaxHeight="112" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="4">
+            <ItemsControl ItemsSource="{Binding FollowedDiffs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:AIChatDiff">
+                  <Border Background="{DynamicResource Brush.SubPanel}" BorderThickness="2,0,0,0" BorderBrush="{DynamicResource Brush.Accent}" Padding="6,3" Margin="0,0,0,4">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <TextBlock Text="{DynamicResource Text.AI.Sidebar.Current}" FontSize="11" Foreground="{DynamicResource Brush.FG2}" Margin="0,0,6,0"/>
+                      <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Path}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
+                        <TextBlock Text="{Binding Source}" FontSize="11" Foreground="{DynamicResource Brush.FG2}" TextTrimming="CharacterEllipsis"/>
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ItemsControl ItemsSource="{Binding Attachments}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:AIChatAttachment">
+                  <Border Background="{DynamicResource Brush.SubPanel}" BorderThickness="2,0,0,0" BorderBrush="{DynamicResource Brush.Border0}" Padding="6,3" Margin="0,0,0,4">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <TextBlock Text="{DynamicResource Text.AI.Sidebar.Pinned}" FontSize="11" Foreground="{DynamicResource Brush.FG2}" Margin="0,0,6,0"/>
+                      <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Path}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
+                        <TextBlock Text="{Binding Source}" FontSize="11" Foreground="{DynamicResource Brush.FG2}" TextTrimming="CharacterEllipsis"/>
+                      </StackPanel>
+                      <Button Grid.Column="2" Classes="icon_button" Width="20" Click="OnRemoveAttachment"
+                              ToolTip.Tip="{DynamicResource Text.AI.Sidebar.Remove}">
+                        <Path Width="10" Height="10" Data="{StaticResource Icons.Close}"/>
+                      </Button>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+        <TextBlock Text="{Binding ContextError}" TextWrapping="Wrap" Foreground="OrangeRed" FontSize="11"
+                   IsVisible="{Binding ContextError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <TextBox x:Name="AIInputBox" MinHeight="64" MaxHeight="120" Padding="8,6" AcceptsReturn="True"
+                 Text="{Binding AIInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 Watermark="{DynamicResource Text.Diff.AI.Input}" IsEnabled="{Binding IsAIAvailable}"
+                 VerticalContentAlignment="Top"/>
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+          <Button Classes="flat" Height="26" Padding="6,0" FontSize="11" BorderThickness="0"
+                  Content="{DynamicResource Text.AI.Sidebar.AddCurrent}" IsEnabled="{Binding CanAddCurrentDiff}" Click="OnAddCurrentDiff"/>
+          <v:LoadingIcon Grid.Column="1" Width="12" Height="12" Margin="4,0" IsVisible="{Binding IsAddingAttachment}"/>
+          <Button Grid.Column="3" Classes="flat primary" Height="26" Padding="10,0"
+                  Content="{DynamicResource Text.Diff.AI.Send}" IsVisible="{Binding !IsAIResponding}"
+                  IsEnabled="{Binding CanSendAIMessage}" Click="OnSendAIMessage"/>
+          <Button Grid.Column="3" Classes="flat" Height="26" Padding="10,0"
+                  Content="{DynamicResource Text.Diff.AI.Stop}" IsVisible="{Binding IsAIResponding}" Command="{Binding CancelAIRequest}"/>
+        </Grid>
+        <TextBlock Text="{DynamicResource Text.AI.Sidebar.Keys}" FontSize="11" Foreground="{DynamicResource Brush.FG2}"/>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

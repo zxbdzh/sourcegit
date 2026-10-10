@@ -1,4 +1,5 @@
 ﻿using System;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -13,6 +14,8 @@ namespace SourceGit.Views
         public DiffView()
         {
             InitializeComponent();
+            LayoutUpdated += (_, _) => SynchronizeAIContext();
+
         }
 
         public void ToggleHotkeyBindings(bool enabled)
@@ -43,6 +46,9 @@ namespace SourceGit.Views
             if (DataContext is ViewModels.DiffContext vm)
                 vm.CheckSettings();
 
+            _aiChat = (this.FindAncestorOfType<Repository>()?.DataContext as ViewModels.Repository)?.AIChat;
+            BtnAddDiffToAI.IsEnabled = _aiChat != null;
+            SynchronizeAIContext();
             ToggleHotkeyBindings(IsEffectivelyVisible);
         }
 
@@ -50,7 +56,34 @@ namespace SourceGit.Views
         {
             base.OnUnloaded(e);
             ToggleHotkeyBindings(false);
+            if (_aiChat != null && _aiChat.CurrentDiff == _lastAIDiff)
+                _aiChat.CurrentDiff = null;
+            _lastAIDiff = null;
+            _aiChat = null;
         }
+
+        protected override void OnSizeChanged(SizeChangedEventArgs e)
+        {
+            base.OnSizeChanged(e);
+            // 固定 AI 入口并给文件标题留位置；窄窗口内其余差异工具可横向滚动。
+            ToolbarActions.MaxWidth = Math.Max(80, e.NewSize.Width - 200);
+        }
+
+        private void SynchronizeAIContext()
+        {
+            if (_aiChat == null)
+                return;
+            var current = IsEffectivelyVisible && Bounds.Height > 0 && DataContext is ViewModels.DiffContext { IsTextDiff: true } diff ? diff : null;
+            if (current == _lastAIDiff)
+                return;
+            // 隐藏页面不能覆盖另一页的当前差异；布局通知仅在对象或可见性变化时更新状态。
+            if (current != null || _aiChat.CurrentDiff == _lastAIDiff)
+                _aiChat.CurrentDiff = current;
+            _lastAIDiff = current;
+        }
+
+        private ViewModels.AIChatContext _aiChat;
+        private ViewModels.DiffContext _lastAIDiff;
 
         private void OnGotoFirstChange(object _, RoutedEventArgs e)
         {
@@ -74,6 +107,16 @@ namespace SourceGit.Views
         {
             this.FindDescendantOfType<ThemedTextDiffPresenter>()?.GotoChange(ViewModels.BlockNavigationDirection.Last);
             e.Handled = true;
+        }
+
+        private async void OnAddDiffToAI(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (DataContext is ViewModels.DiffContext diff && this.FindAncestorOfType<Repository>()?.DataContext is ViewModels.Repository repo)
+            {
+                repo.AIChat.CurrentDiff = diff;
+                await repo.AIChat.AddCurrentDiffAsync();
+            }
         }
 
         private void OnToggleButtonPropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)

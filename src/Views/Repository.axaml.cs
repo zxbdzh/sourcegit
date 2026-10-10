@@ -65,7 +65,7 @@ namespace SourceGit.Views
             get => _sidebarWidth;
             set
             {
-                if (SetAndRaise(SidebarWidthProperty, ref _sidebarWidth, value))
+                if (SetAndRaise(SidebarWidthProperty, ref _sidebarWidth, value) && !_isAICompactLayout)
                 {
                     var layout = ViewModels.Preferences.Instance.Layout;
                     if (_isCommitSearchPanelVisible)
@@ -80,6 +80,14 @@ namespace SourceGit.Views
         {
             _sidebarWidth = new GridLength(ViewModels.Preferences.Instance.Layout.RepositorySidebarWidth);
             InitializeComponent();
+            LayoutUpdated += (_, _) =>
+            {
+                var compact = DataContext is ViewModels.Repository { AIChat.IsExpanded: true } && Bounds.Width < 1400;
+                if (_isAICompactLayout == compact)
+                    return;
+                _isAICompactLayout = compact;
+                CalculateSidebarWidth();
+            };
         }
 
         protected override void OnLoaded(RoutedEventArgs e)
@@ -513,6 +521,13 @@ namespace SourceGit.Views
         private void CalculateSidebarWidth()
         {
             var layout = ViewModels.Preferences.Instance.Layout;
+            // 小窗口打开 AI 时让出分支导航宽度，文件列表和差异对比仍保持并排。
+            if (_isAICompactLayout)
+            {
+                SidebarMinWidth = 0;
+                SidebarWidth = new GridLength(0);
+                return;
+            }
             if (_isCommitSearchPanelVisible)
             {
                 SidebarMinWidth = 200;
@@ -530,6 +545,7 @@ namespace SourceGit.Views
             }
         }
 
+        private bool _isAICompactLayout;
         private bool _isNormalSidebarVisible = true;
         private bool _isCommitSearchPanelVisible = false;
         private double _sidebarMinWidth = 200;

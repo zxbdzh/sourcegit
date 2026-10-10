@@ -124,6 +124,14 @@ namespace SourceGit.ViewModels
         {
             _repo = repo;
         }
+        public Models.DiffOption CreateAIDiffOption(Models.Change change)
+        {
+            // Stash 的未跟踪文件保存在第三个父提交，不能拿工作副本版本代替。
+            return _untracked.Contains(change)
+                ? new Models.DiffOption(_selectedStash.UntrackedParent, _selectedStash.Parents[2], change)
+                : new Models.DiffOption(_selectedStash.Parents[0], _selectedStash.SHA, change);
+        }
+
 
         public void ClearStashes()
         {

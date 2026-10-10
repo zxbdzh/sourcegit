@@ -103,6 +103,11 @@ namespace SourceGit.ViewModels
             _endPoint = (object)endPoint ?? Models.Null.Instance;
             Refresh();
         }
+        public Models.DiffOption CreateAIDiffOption(Models.Change change)
+        {
+            return new Models.DiffOption(GetSHA(_startPoint), GetSHA(_endPoint), change);
+        }
+
 
         public RevisionCompare Clone()
         {

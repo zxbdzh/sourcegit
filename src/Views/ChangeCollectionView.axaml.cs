@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Avalonia;
 using Avalonia.Controls;
@@ -167,6 +168,81 @@ namespace SourceGit.Views
         {
             InitializeComponent();
         }
+
+        protected override void OnLoaded(RoutedEventArgs e)
+        {
+            base.OnLoaded(e);
+            _aiChat = (this.FindAncestorOfType<Repository>()?.DataContext as ViewModels.Repository)?.AIChat;
+            LayoutUpdated += OnAISelectionLayoutUpdated;
+            SynchronizeAISelection();
+        }
+
+        protected override void OnUnloaded(RoutedEventArgs e)
+        {
+            LayoutUpdated -= OnAISelectionLayoutUpdated;
+            ClearAISelection();
+            _aiChat = null;
+            base.OnUnloaded(e);
+        }
+
+        private void OnAISelectionLayoutUpdated(object sender, EventArgs e) => SynchronizeAISelection();
+
+        private void SynchronizeAISelection()
+        {
+            if (_aiChat == null)
+                return;
+
+            // 单选仍由 DiffView 跟随；多选和文件夹选区直接使用各文件的比较来源。
+            if (!IsEffectivelyVisible || Bounds.Height <= 0 || Selection is not { Count: > 1 })
+            {
+                ClearAISelection();
+                return;
+            }
+
+            var repo = this.FindAncestorOfType<Repository>()?.DataContext as ViewModels.Repository;
+            if (repo == null)
+                return;
+
+            var diffs = new List<ViewModels.AIChatDiff>();
+            foreach (var change in Selection.Changes)
+            {
+                var option = DataContext switch
+                {
+                    ViewModels.WorkingCopy vm => vm.CreateAIDiffOption(change, IsUnstagedChange),
+                    ViewModels.CommitDetail { Commit: not null } vm => vm.CreateAIDiffOption(change),
+                    ViewModels.RevisionCompare vm => vm.CreateAIDiffOption(change),
+                    ViewModels.Compare vm => vm.CreateAIDiffOption(change),
+                    ViewModels.StashesPage { SelectedStash: not null } vm => vm.CreateAIDiffOption(change),
+                    _ => null,
+                };
+                if (option != null)
+                    diffs.Add(ViewModels.AIChatDiff.FromOption(repo.FullPath, option));
+            }
+
+            diffs = diffs.DistinctBy(x => x.Key).ToList();
+            if (diffs.Count < 2)
+            {
+                ClearAISelection();
+                return;
+            }
+
+            if (_lastAISelection != null && _lastAISelection.Select(x => x.Key).SequenceEqual(diffs.Select(x => x.Key)))
+                return;
+
+            _aiChat.SetCurrentDiffs(diffs);
+            _lastAISelection = _aiChat.CurrentDiffs;
+        }
+
+        private void ClearAISelection()
+        {
+            // 只清除自己提供的选区，隐藏列表不能覆盖新页面的上下文。
+            if (_lastAISelection != null && ReferenceEquals(_aiChat?.CurrentDiffs, _lastAISelection))
+                _aiChat.SetCurrentDiffs([]);
+            _lastAISelection = null;
+        }
+
+        private ViewModels.AIChatContext _aiChat;
+        private IReadOnlyList<ViewModels.AIChatDiff> _lastAISelection;
 
         public void ToggleNodeIsExpanded(ViewModels.ChangeTreeNode node)
         {
