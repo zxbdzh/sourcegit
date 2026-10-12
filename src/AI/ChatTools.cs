@@ -75,14 +75,53 @@ namespace SourceGit.AI
             }
             """)), false);
 
-        public static async Task<ToolChatMessage> ProcessAsync(ChatToolCall call, string repo, string amendParent, Action<string> output, CancellationToken cancellation = default)
+        public static async Task<ToolChatMessage> ProcessWithProgressAsync(ChatToolCall call, string repo, Action<ToolCallProgress> progress, CancellationToken cancellation, Action<ViewModels.AIChatBaseline> onBaseline = null)
+        {
+            var arguments = call.FunctionArguments.ToString();
+            if (arguments.Length > 2000)
+                arguments = arguments[..2000] + "…";
+            var started = System.Diagnostics.Stopwatch.StartNew();
+            progress?.Invoke(new(call.Id, call.FunctionName, arguments, ToolCallState.Running, TimeSpan.Zero));
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            try
+            {
+                var result = await ProcessAsync(call, repo, null, null, timeout.Token, onBaseline);
+                timeout.Token.ThrowIfCancellationRequested();
+                var text = string.Join("\n", result.Content.Select(x => x.Text));
+                progress?.Invoke(new(call.Id, call.FunctionName, arguments,
+                    text.StartsWith("Tool error:", StringComparison.Ordinal) ? ToolCallState.Failed : ToolCallState.Completed,
+                    started.Elapsed, text.Length > 2000 ? text[..2000] + "…" : text));
+                return result;
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                progress?.Invoke(new(call.Id, call.FunctionName, arguments, ToolCallState.Canceled, started.Elapsed));
+                throw;
+            }
+            catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+            {
+                const string error = "Tool error: Execution timed out after 10 seconds. Narrow the request and try again.";
+                progress?.Invoke(new(call.Id, call.FunctionName, arguments, ToolCallState.TimedOut, started.Elapsed, error));
+                return new ToolChatMessage(call.Id, error);
+            }
+            catch (Exception e)
+            {
+                progress?.Invoke(new(call.Id, call.FunctionName, arguments, ToolCallState.Failed, started.Elapsed, e.Message));
+                throw;
+            }
+        }
+
+        private static ToolChatMessage Error(string id, string text) => new(id, $"Tool error: {text}");
+
+        public static async Task<ToolChatMessage> ProcessAsync(ChatToolCall call, string repo, string amendParent, Action<string> output, CancellationToken cancellation = default, Action<ViewModels.AIChatBaseline> onBaseline = null)
         {
             try
             {
                 cancellation.ThrowIfCancellationRequested();
                 using var doc = JsonDocument.Parse(call.FunctionArguments);
                 if (doc.RootElement.ValueKind != JsonValueKind.Object)
-                    return new ToolChatMessage(call.Id, "Tool arguments must be a JSON object.");
+                    return Error(call.Id, "Tool arguments must be a JSON object.");
 
                 if (call.FunctionName.Equals(GetDetailChangesInFile.FunctionName))
                 {
@@ -101,12 +140,15 @@ namespace SourceGit.AI
                 }
 
                 if (call.FunctionName.Equals(ReadFile.FunctionName))
-                    return await ReadFileAsync(call.Id, doc.RootElement, repo, output, cancellation);
+                    return await ReadFileAsync(call.Id, doc.RootElement, repo, output, cancellation, onBaseline);
 
                 if (call.FunctionName.Equals(Grep.FunctionName))
                     return await GrepAsync(call.Id, doc.RootElement, repo, output, cancellation);
 
-                return new ToolChatMessage(call.Id, $"Unsupported tool: {call.FunctionName}");
+                if (GitChatTools.All.Any(x => x.FunctionName == call.FunctionName))
+                    return await GitChatTools.ProcessAsync(call.Id, call.FunctionName, doc.RootElement, repo, cancellation);
+
+                return Error(call.Id, $"Unsupported tool: {call.FunctionName}");
             }
             catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
             {
@@ -115,10 +157,10 @@ namespace SourceGit.AI
             }
         }
 
-        private static async Task<ToolChatMessage> ReadFileAsync(string callId, JsonElement args, string repo, Action<string> output, CancellationToken cancellation)
+        private static async Task<ToolChatMessage> ReadFileAsync(string callId, JsonElement args, string repo, Action<string> output, CancellationToken cancellation, Action<ViewModels.AIChatBaseline> onBaseline)
         {
             if (!args.TryGetProperty("path", out var pathEl) || pathEl.ValueKind != JsonValueKind.String)
-                return new ToolChatMessage(callId, "path is required");
+                return Error(callId, "path is required");
 
             var relative = pathEl.GetString();
             output?.Invoke($"ReadFile {relative}");
@@ -130,21 +172,21 @@ namespace SourceGit.AI
             }
             catch (Exception e)
             {
-                return new ToolChatMessage(callId, e.Message);
+                return Error(callId, e.Message);
             }
 
-            if (!File.Exists(full))
-                return new ToolChatMessage(callId, "File not found.");
 
-            // 不把大文件一次性装入内存；按行分页，并限制单次返回字符数。
-            using var file = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.Asynchronous);
-            if (file.Length > 8 * 1024 * 1024)
-                return new ToolChatMessage(callId, "File exceeds the 8 MiB text-file limit. Use Grep to locate relevant lines.");
-            var prefix = new byte[4096];
-            var prefixLength = await file.ReadAsync(prefix.AsMemory(), cancellation);
-            if (prefix.AsSpan(0, prefixLength).IndexOf((byte)0) >= 0)
-                return new ToolChatMessage(callId, "Binary file skipped.");
-            file.Position = 0;
+            var baseline = await ViewModels.AIChatBaseline.CaptureAsync(repo, relative, cancellation);
+            if (baseline.Original == null)
+            {
+                onBaseline?.Invoke(baseline);
+                return Error(callId, "File not found. Its absence was captured for a new-file proposal.");
+            }
+            // 工具输出和待应用基线使用同一份字节，不能再次读取可能已改变的文件。
+            var bytes = baseline.Original;
+            if (bytes.AsSpan().IndexOf((byte)0) >= 0)
+                return Error(callId, "Binary file skipped.");
+            onBaseline?.Invoke(baseline);
 
             var start = 1;
             if (args.TryGetProperty("start_line", out var startEl) && startEl.TryGetInt32(out var parsedStart) && parsedStart > 1)
@@ -153,7 +195,7 @@ namespace SourceGit.AI
             if (args.TryGetProperty("max_lines", out var maxEl) && maxEl.TryGetInt32(out var parsedMax) && parsedMax > 0)
                 max = Math.Min(parsedMax, 2000);
 
-            using var reader = new StreamReader(file, Encoding.UTF8, true);
+            using var reader = new StreamReader(new MemoryStream(bytes), Encoding.UTF8, true);
             var builder = new StringBuilder().Append("path: ").AppendLine(relative);
             var lineNumber = 0;
             var returned = 0;
@@ -181,32 +223,34 @@ namespace SourceGit.AI
         private static async Task<ToolChatMessage> GrepAsync(string callId, JsonElement args, string repo, Action<string> output, CancellationToken cancellation)
         {
             if (!args.TryGetProperty("pattern", out var patternEl) || patternEl.ValueKind != JsonValueKind.String)
-                return new ToolChatMessage(callId, "pattern is required");
+                return Error(callId, "pattern is required");
 
             var pattern = patternEl.GetString();
             if (string.IsNullOrEmpty(pattern) || pattern.Length > 200)
-                return new ToolChatMessage(callId, "pattern is empty or too long.");
+                return Error(callId, "pattern is empty or too long.");
 
             var path = args.TryGetProperty("path", out var pathEl) && pathEl.ValueKind == JsonValueKind.String
                 ? pathEl.GetString()
                 : string.Empty;
             if (!string.IsNullOrEmpty(path))
             {
-                var probe = path.Replace('/', Path.DirectorySeparatorChar);
-                if (Path.IsPathRooted(probe) || probe.Contains(':') || probe.Split(Path.DirectorySeparatorChar).Contains(".."))
-                    return new ToolChatMessage(callId, "Path must be relative to the repository.");
+                ResolveRepoPath(repo, path);
             }
 
             output?.Invoke(string.IsNullOrEmpty(path) ? $"Grep {pattern}" : $"Grep {pattern} in {path}");
             var rs = await new Commands.GrepForAI(repo, pattern, path) { CancellationToken = cancellation }.ReadAsync();
-            var text = string.IsNullOrWhiteSpace(rs.StdOut) ? (string.IsNullOrWhiteSpace(rs.StdErr) ? "No matches." : rs.StdErr.Trim()) : rs.StdOut.Trim();
+            if (!rs.IsSuccess && !string.IsNullOrWhiteSpace(rs.StdErr))
+                return Error(callId, rs.StdErr.Trim());
+            var text = string.IsNullOrWhiteSpace(rs.StdOut) ? "No matches." : rs.StdOut.Trim();
             return new ToolChatMessage(callId, text.Length > 30000 ? text[..30000] + "\n[truncated]" : text);
         }
 
-        private static string ResolveRepoPath(string repo, string path)
+        internal static string ResolveRepoPath(string repo, string path)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new InvalidOperationException("Path is required.");
+            if (path.Split(['/', '\\']).Any(x => x is "." or "..") || path.Contains('\0'))
+                throw new InvalidOperationException("Path must not contain traversal segments or NUL.");
             if (Path.IsPathRooted(path) || path.Contains(':'))
                 throw new InvalidOperationException("Path must be relative to the repository.");
 

@@ -418,20 +418,70 @@
   <x:String x:Key="Text.AI.Sidebar.Close" xml:space="preserve">Close AI sidebar</x:String>
   <x:String x:Key="Text.AI.Sidebar.Follow" xml:space="preserve">Follow current diff</x:String>
   <x:String x:Key="Text.AI.Sidebar.NoCurrent" xml:space="preserve">No visible text diff</x:String>
+  <x:String x:Key="Text.AI.Sidebar.NotFollowing" xml:space="preserve">Not following the current diff; only pinned attachments will be sent</x:String>
   <x:String x:Key="Text.AI.Sidebar.SelectedCount" xml:space="preserve">{0} changes selected</x:String>
   <x:String x:Key="Text.AI.Sidebar.Empty" xml:space="preserve">Ask about the current change, or attach other diffs to analyze together. Browsing files does not send requests. Diffs are included when sending and truncated above 120,000 characters in total.</x:String>
   <x:String x:Key="Text.AI.Sidebar.Context" xml:space="preserve">Context for this message</x:String>
   <x:String x:Key="Text.AI.Sidebar.Current" xml:space="preserve">Current</x:String>
+  <x:String x:Key="Text.AI.Sidebar.RemoveCurrent" xml:space="preserve">Exclude from current context</x:String>
+  <x:String x:Key="Text.AI.Sidebar.HistoryTrimmed" xml:space="preserve">{0} earlier turns omitted from model history; UI transcript retained. Up to 6 turns / 120000 characters (not tokens).</x:String>
   <x:String x:Key="Text.AI.Sidebar.Pinned" xml:space="preserve">Pinned</x:String>
   <x:String x:Key="Text.AI.Sidebar.Remove" xml:space="preserve">Remove diff attachment</x:String>
   <x:String x:Key="Text.AI.Sidebar.AddCurrent" xml:space="preserve">Attach current diff</x:String>
   <x:String x:Key="Text.AI.Sidebar.Add" xml:space="preserve">Add to AI</x:String>
-  <x:String x:Key="Text.AI.Sidebar.AddTip" xml:space="preserve">Pin the current full text diff as a chat attachment</x:String>
+  <x:String x:Key="Text.AI.Sidebar.AddTip" xml:space="preserve">Pin the current diff</x:String>
   <x:String x:Key="Text.AI.Sidebar.Keys" xml:space="preserve">Enter to send · Shift+Enter for newline</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Mode" xml:space="preserve">Mode</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Source" xml:space="preserve">Analysis source</x:String>
+  <x:String x:Key="Text.AI.Sidebar.SentContext" xml:space="preserve">Context sent</x:String>
+  <x:String x:Key="Text.AI.Sidebar.NonStreaming" xml:space="preserve">Incompatible streaming response. Using a complete response; repository tools remain available.</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ResponseFormatError" xml:space="preserve">The AI service returned an incompatible response, including the complete-response retry. Check OpenAI tool calling support or switch services and retry.</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ErrorDetails" xml:space="preserve">Error details</x:String>
+  <x:String x:Key="Text.AI.Sidebar.SendScope" xml:space="preserve">This message sends {0} file(s) · {1}/120000 chars</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ContextWarnings" xml:space="preserve">{0} truncated · {1} omitted</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolSummaryRunning" xml:space="preserve">Running {0} tool call(s) · {1}</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolSummaryIssue" xml:space="preserve">{0} tool call(s), {1} need attention · {2}</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolSummaryCompleted" xml:space="preserve">Completed {0} tool call(s) · {1}</x:String>
   <x:String x:Key="Text.AI.Sidebar.Unstaged" xml:space="preserve">Index → Working tree · Unstaged</x:String>
   <x:String x:Key="Text.AI.Sidebar.Staged" xml:space="preserve">HEAD → Index · Staged</x:String>
   <x:String x:Key="Text.AI.Sidebar.Truncated" xml:space="preserve">Truncated</x:String>
   <x:String x:Key="Text.AI.Sidebar.Limit" xml:space="preserve">Context limit reached; remaining diffs were not sent</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Omitted" xml:space="preserve">Omitted</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Statistics" xml:space="preserve">{0}/{1} files · {2}/{3} chars · {4} truncated · {5} omitted</x:String>
+  <x:String x:Key="Text.AI.Sidebar.PreparingContext" xml:space="preserve">Reading diffs and counting context...</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Retry" xml:space="preserve">Retry</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolRunning" xml:space="preserve">Running</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolCompleted" xml:space="preserve">Completed</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolFailed" xml:space="preserve">Failed</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolTimedOut" xml:space="preserve">Timed out</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolCanceled" xml:space="preserve">Canceled</x:String>
+  <x:String x:Key="Text.AI.Review.Mode.Chat" xml:space="preserve">Conversation</x:String>
+  <x:String x:Key="Text.AI.Review.Mode.Bugs" xml:space="preserve">Bugs / Regressions</x:String>
+  <x:String x:Key="Text.AI.Review.Mode.Security" xml:space="preserve">Security review</x:String>
+  <x:String x:Key="Text.AI.Review.Mode.Exceptions" xml:space="preserve">Exceptional paths</x:String>
+  <x:String x:Key="Text.AI.Review.Mode.Tests" xml:space="preserve">Test plan</x:String>
+  <x:String x:Key="Text.AI.Review.Run" xml:space="preserve">Run review</x:String>
+  <x:String x:Key="Text.AI.Review.Safety" xml:space="preserve">Files change only after you accept a patch</x:String>
+  <x:String x:Key="Text.AI.Review.Prompt.Bugs" xml:space="preserve">Review these changes for bugs and behavior regressions. Rank evidence-based findings with location, impact, recommendation and verification.</x:String>
+  <x:String x:Key="Text.AI.Review.Prompt.Security" xml:space="preserve">Review these changes for security risks, focusing on trust boundaries, injection, authorization and path safety. Report only evidence-based findings.</x:String>
+  <x:String x:Key="Text.AI.Review.Prompt.Exceptions" xml:space="preserve">Review exceptional paths in these changes: null inputs, boundaries, cancellation, timeouts, error recovery and resource cleanup.</x:String>
+  <x:String x:Key="Text.AI.Review.Prompt.Tests" xml:space="preserve">Create an actionable test plan for these changes with preconditions, input or action, expected results and priority.</x:String>
+  <x:String x:Key="Text.AI.Patch.Title" xml:space="preserve">Patch preview</x:String>
+  <x:String x:Key="Text.AI.Patch.Accept" xml:space="preserve">Accept selected hunks</x:String>
+  <x:String x:Key="Text.AI.Patch.Reject" xml:space="preserve">Reject file</x:String>
+  <x:String x:Key="Text.AI.Patch.Undo" xml:space="preserve">Undo this application</x:String>
+  <x:String x:Key="Text.AI.Patch.Hunk" xml:space="preserve">Accept this hunk</x:String>
+  <x:String x:Key="Text.AI.Patch.Pending" xml:space="preserve">Awaiting confirmation</x:String>
+  <x:String x:Key="Text.AI.Patch.Applied" xml:space="preserve">Applied</x:String>
+  <x:String x:Key="Text.AI.Patch.Rejected" xml:space="preserve">Rejected</x:String>
+  <x:String x:Key="Text.AI.Patch.Undone" xml:space="preserve">Undone</x:String>
+  <x:String x:Key="Text.AI.Patch.FailedState" xml:space="preserve">Not applied</x:String>
+  <x:String x:Key="Text.AI.Patch.Stale" xml:space="preserve">File changed. Refusing to overwrite; read it again and regenerate the patch.</x:String>
+  <x:String x:Key="Text.AI.Patch.NoBaseline" xml:space="preserve">No working-tree baseline captured before generation. Preview only; ask AI to read the working file and regenerate.</x:String>
+  <x:String x:Key="Text.AI.Review.Mode.Patch" xml:space="preserve">Generate patch</x:String>
+  <x:String x:Key="Text.AI.Review.Mode.Explain" xml:space="preserve">Explain changes</x:String>
+  <x:String x:Key="Text.AI.Review.Prompt.Explain" xml:space="preserve">Explain the intent and user-visible impact of these changes, citing the inspected code.</x:String>
+  <x:String x:Key="Text.AI.Review.Prompt.Patch" xml:space="preserve">Read related working-tree files first and propose a minimal fix for these changes as a reviewable unified diff. Do not modify files.</x:String>
   <x:String x:Key="Text.Diff.Welcome" xml:space="preserve">SELECT FILE TO VIEW CHANGES</x:String>
   <x:String x:Key="Text.DirHistories" xml:space="preserve">Dir History</x:String>
   <x:String x:Key="Text.DirtyState.HasLocalChanges" xml:space="preserve">Has Local Changes</x:String>

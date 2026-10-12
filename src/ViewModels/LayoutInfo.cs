@@ -41,7 +41,7 @@ namespace SourceGit.ViewModels
             set;
         } = 250;
 
-        public double AIChatSidebarWidth { get; set; } = 370;
+        public double AIChatSidebarWidth { get; set; } = 440;
 
         public double RepositorySearchCommitWidth
         {

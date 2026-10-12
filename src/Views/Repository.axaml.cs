@@ -82,6 +82,8 @@ namespace SourceGit.Views
             InitializeComponent();
             LayoutUpdated += (_, _) =>
             {
+                if (DataContext is ViewModels.Repository repository)
+                    repository.AIChat.IsCompactSidebar = Bounds.Width < 1200;
                 var compact = DataContext is ViewModels.Repository { AIChat.IsExpanded: true } && Bounds.Width < 1400;
                 if (_isAICompactLayout == compact)
                     return;

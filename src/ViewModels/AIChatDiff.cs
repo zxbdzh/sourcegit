@@ -11,6 +11,11 @@ namespace SourceGit.ViewModels
         public string Source => VisualDiff?.AISource ?? (_option.IsLocalChange
             ? (_option.IsUnstaged ? App.Text("AI.Sidebar.Unstaged") : App.Text("AI.Sidebar.Staged"))
             : string.Join(" → ", _option.Revisions.ConvertAll(x => string.IsNullOrEmpty(x) || x == "-R" ? App.Text("Worktree") : x)));
+        public string DisplaySource => FormatSource(Source);
+
+        // 只缩短完整 SHA；保留 ^、~ 等修订语义，模型上下文和附件 key 仍使用原始版本。
+        public static string FormatSource(string source) => System.Text.RegularExpressions.Regex.Replace(
+            source ?? string.Empty, @"\b[0-9a-fA-F]{40}\b", match => match.Value[..7]);
 
         private readonly string _repo;
         private readonly Models.DiffOption _option;

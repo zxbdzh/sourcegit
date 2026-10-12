@@ -106,11 +106,26 @@ namespace SourceGit.ViewModels
 
         public static async Task<AIChatAttachment> ReadAIContextAsync(string repo, Models.DiffOption option, CancellationToken cancellation)
         {
+            AIChatBaseline baseline = null;
+            if (option.IsLocalChange)
+            {
+                try { baseline = await AIChatBaseline.CaptureAsync(repo, option.Path, cancellation); }
+                catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException)
+                {
+                    // 基线不可读不应阻塞只读分析，但相应补丁不得写入。
+                }
+            }
             var command = new Commands.Diff(repo, option, 999999999, false, false) { CancellationToken = cancellation };
             var result = await command.ReadAsync();
             cancellation.ThrowIfCancellationRequested();
             if (result.TextDiff is not { } textDiff)
                 throw new InvalidOperationException(App.Text("Diff.AI.NoTextDiff"));
+            if (baseline != null)
+            {
+                var after = await AIChatBaseline.CaptureAsync(repo, option.Path, cancellation);
+                if (baseline.Original == null ? after.Original != null : after.Original == null || !baseline.Original.AsSpan().SequenceEqual(after.Original))
+                    baseline = null;
+            }
             return new AIChatAttachment
             {
                 Key = option.ToString(),
@@ -119,6 +134,7 @@ namespace SourceGit.ViewModels
                     ? (option.IsUnstaged ? App.Text("AI.Sidebar.Unstaged") : App.Text("AI.Sidebar.Staged"))
                     : string.Join(" → ", option.Revisions.ConvertAll(x => string.IsNullOrEmpty(x) || x == "-R" ? App.Text("Worktree") : x)),
                 Patch = FormatDiffForAI(textDiff),
+                Baseline = baseline,
             };
         }
 

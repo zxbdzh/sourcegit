@@ -112,6 +112,7 @@ namespace SourceGit.Views
             {
                 FontSize = size,
                 FontWeight = weight,
+                LineHeight = Math.Max(22, size * 1.5),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(indent, top, 0, 0)
             };
@@ -138,7 +139,8 @@ namespace SourceGit.Views
 
             var body = new SelectableTextBlock
             {
-                FontSize = 12,
+                FontSize = 13,
+                LineHeight = 22,
                 TextWrapping = TextWrapping.Wrap
             };
             body.Classes.Add("md_code_text");

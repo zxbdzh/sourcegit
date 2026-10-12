@@ -1,15 +1,31 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SourceGit.AI;
 
 namespace SourceGit.ViewModels
 {
     public class AIChatMessage : ObservableObject
     {
         public bool IsUser { get; init; }
+        public ReviewMode ReviewMode { get; init; }
+        public string ModeLabel => App.Text($"AI.Review.Mode.{ReviewMode}");
+        public string ContextSummary => _context?.Split('\n')[0].TrimEnd('\r') ?? string.Empty;
+        public string CompatibilityNotice { get => _compatibilityNotice; set => SetProperty(ref _compatibilityNotice, value); }
+        public string ErrorDetails { get => _errorDetails; set => SetProperty(ref _errorDetails, value); }
+        private string _errorDetails;
+        private string _compatibilityNotice;
+        public bool ShowReviewMode => ReviewMode != ReviewMode.Chat;
 
         public string Context
         {
             get => _context;
-            set => SetProperty(ref _context, value);
+            set
+            {
+                if (SetProperty(ref _context, value))
+                    OnPropertyChanged(nameof(ContextSummary));
+            }
         }
 
         public bool IsError
@@ -32,9 +48,21 @@ namespace SourceGit.ViewModels
             }
         }
 
+        public bool CanRetry
+        {
+            get => _canRetry;
+            set
+            {
+                if (SetProperty(ref _canRetry, value))
+                    OnPropertyChanged(nameof(IsRetryable));
+            }
+        }
+
+        public bool IsRetryable => IsError && CanRetry;
+
         public bool IsWaiting => IsPending && string.IsNullOrEmpty(_text);
 
-        public bool ShowMarkdown => !IsUser && !IsError && !string.IsNullOrEmpty(_text);
+        public bool ShowMarkdown => !IsUser && !IsError && !HasPatches && !string.IsNullOrEmpty(_text);
 
         public string Text
         {
@@ -46,15 +74,119 @@ namespace SourceGit.ViewModels
             }
         }
 
+        public ObservableCollection<AIChatPatchFile> Patches { get; } = [];
+        public bool HasPatches => Patches.Count > 0;
+        public string PatchError { get => _patchError; private set => SetProperty(ref _patchError, value); }
+
+        public void PreparePatches(string repo, System.Collections.Generic.IReadOnlyDictionary<string, AIChatBaseline> baselines)
+        {
+            Patches.Clear();
+            PatchError = string.Empty;
+            try
+            {
+                foreach (var patch in AIChatPatch.Parse(Text, repo, baselines))
+                    Patches.Add(patch);
+            }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.IO.IOException or OverflowException)
+            {
+                Patches.Clear();
+                PatchError = error.Message;
+            }
+            OnPropertyChanged(nameof(HasPatches));
+            OnPropertyChanged(nameof(ShowMarkdown));
+        }
+        public ObservableCollection<AIChatToolCall> ToolCalls { get; } = [];
+        public bool HasToolCalls => ToolCalls.Count > 0;
+
+        public string ToolSummary
+        {
+            get
+            {
+                if (ToolCalls.Count == 0)
+                    return string.Empty;
+
+                var total = TimeSpan.FromMilliseconds(ToolCalls.Sum(x => x.Duration.TotalMilliseconds));
+                var elapsed = total.TotalMilliseconds < 1000 ? $"{total.TotalMilliseconds:0} ms" : $"{total.TotalSeconds:0.0} s";
+                var running = ToolCalls.Count(x => x.State == ToolCallState.Running);
+                var issues = ToolCalls.Count(x => x.State is ToolCallState.Failed or ToolCallState.TimedOut or ToolCallState.Canceled);
+                if (running > 0)
+                    return App.Text("AI.Sidebar.ToolSummaryRunning", ToolCalls.Count, elapsed);
+                if (issues > 0)
+                    return App.Text("AI.Sidebar.ToolSummaryIssue", ToolCalls.Count, issues, elapsed);
+                return App.Text("AI.Sidebar.ToolSummaryCompleted", ToolCalls.Count, elapsed);
+            }
+        }
+        public void ApplyToolProgress(ToolCallProgress progress)
+        {
+            var item = ToolCalls.FirstOrDefault(x => x.Id == progress.Id);
+            if (item == null)
+            {
+                item = new AIChatToolCall { Id = progress.Id };
+                ToolCalls.Add(item);
+            }
+
+            item.Update(progress);
+            OnPropertyChanged(nameof(HasToolCalls));
+            OnPropertyChanged(nameof(ToolSummary));
+        }
+
         private void NotifyVisibility()
         {
             OnPropertyChanged(nameof(IsWaiting));
             OnPropertyChanged(nameof(ShowMarkdown));
+            OnPropertyChanged(nameof(IsRetryable));
         }
 
         private string _context = string.Empty;
         private bool _isError;
         private bool _isPending;
         private string _text = string.Empty;
+        private bool _canRetry;
+        private string _patchError = string.Empty;
+    }
+
+    public sealed class AIChatToolCall : ObservableObject
+    {
+        public string Id { get; init; }
+        public string Name { get; private set; } = string.Empty;
+        public string Arguments { get; private set; } = string.Empty;
+        public string Result { get; private set; } = string.Empty;
+        public string Status { get; private set; } = string.Empty;
+        public string Elapsed { get; private set; } = string.Empty;
+        public bool IsRunning => _state == ToolCallState.Running;
+        public ToolCallState State => _state;
+        public TimeSpan Duration => _duration;
+
+        public void Update(ToolCallProgress progress)
+        {
+            Name = progress.Name;
+            Arguments = progress.Arguments;
+            Result = progress.Result;
+            _state = progress.State;
+            _duration = progress.Elapsed;
+            Status = progress.State switch
+            {
+                ToolCallState.Running => App.Text("AI.Sidebar.ToolRunning"),
+                ToolCallState.Completed => App.Text("AI.Sidebar.ToolCompleted"),
+                ToolCallState.Failed => App.Text("AI.Sidebar.ToolFailed"),
+                ToolCallState.TimedOut => App.Text("AI.Sidebar.ToolTimedOut"),
+                ToolCallState.Canceled => App.Text("AI.Sidebar.ToolCanceled"),
+                _ => string.Empty,
+            };
+            Elapsed = progress.Elapsed.TotalMilliseconds < 1000
+                ? $"{progress.Elapsed.TotalMilliseconds:0} ms"
+                : $"{progress.Elapsed.TotalSeconds:0.0} s";
+            OnPropertyChanged(nameof(Name));
+            OnPropertyChanged(nameof(Arguments));
+            OnPropertyChanged(nameof(Result));
+            OnPropertyChanged(nameof(Status));
+            OnPropertyChanged(nameof(Elapsed));
+            OnPropertyChanged(nameof(IsRunning));
+            OnPropertyChanged(nameof(State));
+            OnPropertyChanged(nameof(Duration));
+        }
+
+        private ToolCallState _state;
+        private TimeSpan _duration;
     }
 }

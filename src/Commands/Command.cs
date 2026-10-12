@@ -148,9 +148,21 @@ namespace SourceGit.Commands
             }
 
             var rs = new Result() { IsSuccess = true };
-            rs.StdOut = await proc.StandardOutput.ReadToEndAsync(CancellationToken).ConfigureAwait(false);
-            rs.StdErr = await proc.StandardError.ReadToEndAsync(CancellationToken).ConfigureAwait(false);
-            await proc.WaitForExitAsync(CancellationToken).ConfigureAwait(false);
+            try
+            {
+                // 同时消费两条输出流，避免 stderr 写满后阻塞只读工具；取消必须停止实际 Git 进程。
+                var stdout = proc.StandardOutput.ReadToEndAsync(CancellationToken);
+                var stderr = proc.StandardError.ReadToEndAsync(CancellationToken);
+                await Task.WhenAll(stdout, stderr, proc.WaitForExitAsync(CancellationToken)).ConfigureAwait(false);
+                rs.StdOut = await stdout.ConfigureAwait(false);
+                rs.StdErr = await stderr.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+            {
+                if (!proc.HasExited)
+                    Native.OS.TerminateProcess(proc);
+                throw;
+            }
 
             rs.IsSuccess = proc.ExitCode == 0;
             return rs;

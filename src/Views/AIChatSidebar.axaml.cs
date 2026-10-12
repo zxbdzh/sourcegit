@@ -40,12 +40,6 @@ namespace SourceGit.Views
                 await vm.SendAIMessageAsync();
         }
 
-        private async void OnAskAIShortcut(object sender, RoutedEventArgs e)
-        {
-            e.Handled = true;
-            if (sender is Button { Tag: string prompt } && DataContext is ViewModels.AIChatContext vm)
-                await vm.SendAIMessageAsync(prompt);
-        }
 
         private async void OnAddCurrentDiff(object sender, RoutedEventArgs e)
         {
@@ -54,11 +48,46 @@ namespace SourceGit.Views
                 await vm.AddCurrentDiffAsync();
         }
 
+        private void OnRemoveFollowedDiff(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (sender is Button { DataContext: ViewModels.AIChatDiff diff } && DataContext is ViewModels.AIChatContext vm)
+                vm.RemoveFollowedDiff(diff);
+        }
+
         private void OnRemoveAttachment(object sender, RoutedEventArgs e)
         {
             e.Handled = true;
             if (sender is Button { DataContext: ViewModels.AIChatAttachment attachment } && DataContext is ViewModels.AIChatContext vm)
                 vm.RemoveAttachment(attachment);
+        }
+
+        private async void OnApplyPatch(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (sender is Button { DataContext: ViewModels.AIChatPatchFile patch } && DataContext is ViewModels.AIChatContext vm)
+                await vm.ApplyPatchAsync(patch);
+        }
+
+        private void OnRejectPatch(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (sender is Button { DataContext: ViewModels.AIChatPatchFile patch })
+                patch.MarkRejected();
+        }
+
+        private async void OnUndoPatch(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (sender is Button { DataContext: ViewModels.AIChatPatchFile patch } && DataContext is ViewModels.AIChatContext vm)
+                await vm.UndoPatchAsync(patch);
+        }
+
+        private async void OnRetryAIMessage(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (sender is Button { DataContext: ViewModels.AIChatMessage reply } && DataContext is ViewModels.AIChatContext vm)
+                await vm.RetryAIMessageAsync(reply);
         }
     }
 }

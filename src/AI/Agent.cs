@@ -15,7 +15,7 @@ namespace SourceGit.AI
         }
 
 
-        public async Task<string> ChatAsync(List<ChatMessage> messages, Action<string> onDelta, string repo, CancellationToken cancellation)
+        public async Task<string> ChatAsync(List<ChatMessage> messages, Action<string> onDelta, string repo, CancellationToken cancellation, Action<ToolCallProgress> onToolProgress = null, Action<ViewModels.AIChatBaseline> onBaseline = null, Action<string> onCompatibility = null)
         {
             var chatClient = _service.GetChatClient();
             if (chatClient == null)
@@ -24,11 +24,14 @@ namespace SourceGit.AI
             var options = new ChatCompletionOptions();
             options.Tools.Add(ChatTools.ReadFile);
             options.Tools.Add(ChatTools.Grep);
+            foreach (var tool in GitChatTools.All)
+                options.Tools.Add(tool);
 #pragma warning disable OPENAI001
             if (!_service.ReasoningEffortLevel.Equals(Options.IgnoredReasoningEffortLevel, StringComparison.OrdinalIgnoreCase))
                 options.ReasoningEffortLevel = new ChatReasoningEffortLevel(_service.ReasoningEffortLevel);
 #pragma warning restore OPENAI001
 
+            var useStreaming = true;
             var log = new StringBuilder();
             var answer = new StringBuilder();
             void Publish()
@@ -49,34 +52,76 @@ namespace SourceGit.AI
                 ChatFinishReason? finish = null;
                 var drafts = new Dictionary<int, ToolDraft>();
 
-                await foreach (var update in chatClient.CompleteChatStreamingAsync(messages, options, cancellation))
+                if (useStreaming)
                 {
-                    if (update.FinishReason != null)
-                        finish = update.FinishReason;
-
-                    foreach (var part in update.ContentUpdate)
+                    try
                     {
-                        if (string.IsNullOrEmpty(part.Text))
-                            continue;
-                        answer.Append(part.Text);
-                        Publish();
-                    }
-
-                    foreach (var tool in update.ToolCallUpdates)
-                    {
-                        if (!drafts.TryGetValue(tool.Index, out var draft))
+                        await foreach (var update in chatClient.CompleteChatStreamingAsync(messages, options, cancellation))
                         {
-                            draft = new ToolDraft();
-                            drafts[tool.Index] = draft;
+                            if (update.FinishReason != null)
+                                finish = update.FinishReason;
+                            foreach (var part in update.ContentUpdate)
+                            {
+                                if (string.IsNullOrEmpty(part.Text))
+                                    continue;
+                                answer.Append(part.Text);
+                                Publish();
+                            }
+                            foreach (var tool in update.ToolCallUpdates)
+                            {
+                                if (!drafts.TryGetValue(tool.Index, out var draft))
+                                {
+                                    draft = new ToolDraft();
+                                    drafts[tool.Index] = draft;
+                                }
+                                if (!string.IsNullOrEmpty(tool.ToolCallId))
+                                    draft.Id = tool.ToolCallId;
+                                if (!string.IsNullOrEmpty(tool.FunctionName))
+                                    draft.Name = tool.FunctionName;
+                                if (tool.FunctionArgumentsUpdate != null)
+                                    draft.Args.Append(tool.FunctionArgumentsUpdate.ToString());
+                            }
                         }
-
-                        if (!string.IsNullOrEmpty(tool.ToolCallId))
-                            draft.Id = tool.ToolCallId;
-                        if (!string.IsNullOrEmpty(tool.FunctionName))
-                            draft.Name = tool.FunctionName;
-                        if (tool.FunctionArgumentsUpdate != null)
-                            draft.Args.Append(tool.FunctionArgumentsUpdate.ToString());
                     }
+                    catch (Exception ex) when (IsResponseFormatError(ex))
+                    {
+                        cancellation.ThrowIfCancellationRequested();
+                        // 本轮工具尚未执行；丢弃残缺流，完整响应仍保留工具能力，不静默变成纯文本模式。
+                        useStreaming = false;
+                        onCompatibility?.Invoke(App.Text("AI.Sidebar.NonStreaming"));
+                    }
+                if (useStreaming && finish == null)
+                {
+                    // 部分中转对 tool_calls:null 只返回半截流而不抛异常；没有完成原因就不能把残片当成最终回答。
+                    useStreaming = false;
+                    answer.Clear();
+                    drafts.Clear();
+                    onCompatibility?.Invoke(App.Text("AI.Sidebar.NonStreaming"));
+                }
+                }
+                if (!useStreaming)
+                {
+                    answer.Clear();
+                    drafts.Clear();
+                    Publish();
+                    ChatCompletion completion = await chatClient.CompleteChatAsync(messages, options, cancellation);
+                    finish = completion.FinishReason;
+                    foreach (var part in completion.Content)
+                    {
+                        if (!string.IsNullOrEmpty(part.Text))
+                            answer.Append(part.Text);
+                    }
+                    if (completion.ToolCalls != null && completion.ToolCalls.Count > 0)
+                    {
+                        for (int i = 0; i < completion.ToolCalls.Count; i++)
+                        {
+                            var tc = completion.ToolCalls[i];
+                            var draft = new ToolDraft { Id = tc.Id, Name = tc.FunctionName };
+                            draft.Args.Append(tc.FunctionArguments.ToString());
+                            drafts[i] = draft;
+                        }
+                    }
+                    Publish();
                 }
 
                 if (finish == ChatFinishReason.ToolCalls || drafts.Count > 0)
@@ -96,18 +141,14 @@ namespace SourceGit.AI
                     if (answer.Length > 0)
                         assistant.Content.Add(ChatMessageContentPart.CreateTextPart(answer.ToString()));
                     messages.Add(assistant);
-                    // 保留工具调用前的说明，但展示用的工具日志不进入模型历史。
+                    // 工具日志不进入模型历史；补丁只在回答完成后进入预览集合。
                     if (answer.Length > 0)
                         log.Append(answer).AppendLine().AppendLine();
                     answer.Clear();
                     foreach (var call in calls)
                     {
                         cancellation.ThrowIfCancellationRequested();
-                        var result = await ChatTools.ProcessAsync(call, repo, null, desc =>
-                        {
-                            log.Append("- ").Append(desc).AppendLine();
-                            Publish();
-                        }, cancellation);
+                        var result = await ChatTools.ProcessWithProgressAsync(call, repo, onToolProgress, cancellation, onBaseline);
                         messages.Add(result);
                     }
 
@@ -131,6 +172,10 @@ namespace SourceGit.AI
 
             throw new Exception("The model exceeded the tool-call limit.");
         }
+
+        public static bool IsResponseFormatError(Exception error) =>
+            error is System.Text.Json.JsonException ||
+            error is InvalidOperationException && error.Message.Contains("requires an element of type", StringComparison.Ordinal);
 
         private sealed class ToolDraft
         {

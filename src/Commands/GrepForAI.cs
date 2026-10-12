@@ -1,4 +1,4 @@
-using System.Text;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace SourceGit.Commands
@@ -8,20 +8,18 @@ namespace SourceGit.Commands
         public GrepForAI(string repo, string pattern, string path)
         {
             WorkingDirectory = repo;
-            Context = repo;
             RaiseError = false;
-
-            var builder = new StringBuilder();
-            // 工作区文本搜索；-I 跳过二进制，--untracked 包含未跟踪文件。
-            builder.Append("grep -n -I -E --untracked --max-count=50 -e ").Append(pattern.Quoted());
+            // 模型参数作为独立 argv；--literal-pathspecs 禁止把路径当 Git 查询表达式。
+            _arguments = ["grep", "-n", "-I", "-E", "--untracked", "--max-count=50", "-e", pattern, "--"];
             if (!string.IsNullOrEmpty(path))
-                builder.Append(" -- ").Append(path.Quoted());
-            Args = builder.ToString();
+                _arguments.Add(path);
         }
 
         public async Task<Result> ReadAsync()
         {
-            return await ReadToEndAsync().ConfigureAwait(false);
+            return await GitReadOnlyForAI.ReadAsync(WorkingDirectory, _arguments, CancellationToken, 30000).ConfigureAwait(false);
         }
+
+        private readonly List<string> _arguments;
     }
 }
