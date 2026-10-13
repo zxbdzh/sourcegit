@@ -438,7 +438,10 @@
   <x:String x:Key="Text.AI.Sidebar.Mode" xml:space="preserve">模式</x:String>
   <x:String x:Key="Text.AI.Sidebar.Source" xml:space="preserve">分析来源</x:String>
   <x:String x:Key="Text.AI.Sidebar.SentContext" xml:space="preserve">本条发送的上下文</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Evidence" xml:space="preserve">本轮分析依据</x:String>
   <x:String x:Key="Text.AI.Sidebar.NonStreaming" xml:space="preserve">流式响应格式不兼容，已改用完整响应；仓库工具仍可用。</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolBudgetSummary" xml:space="preserve">已达到 8 轮工具查询预算，正在根据已有依据总结；未完成的检查将明确说明。</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolBudgetRefused" xml:space="preserve">已停止工具查询，但模型仍请求调用工具。请缩小问题范围后重试；已执行的查询可在工具记录中查看。</x:String>
   <x:String x:Key="Text.AI.Sidebar.ResponseFormatError" xml:space="preserve">AI 服务返回格式不兼容，完整响应重试也未成功。请检查接口与模型是否支持 OpenAI 工具调用，或切换服务后重试。</x:String>
   <x:String x:Key="Text.AI.Sidebar.ErrorDetails" xml:space="preserve">查看错误详情</x:String>
   <x:String x:Key="Text.AI.Sidebar.SendScope" xml:space="preserve">本次发送 {0} 个文件 · {1}/120000 字符</x:String>
@@ -449,15 +452,36 @@
   <x:String x:Key="Text.AI.Sidebar.Unstaged" xml:space="preserve">索引 → 工作副本 · 未暂存</x:String>
   <x:String x:Key="Text.AI.Sidebar.Staged" xml:space="preserve">HEAD → 索引 · 已暂存</x:String>
   <x:String x:Key="Text.AI.Sidebar.Truncated" xml:space="preserve">已截断</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ContextSent" xml:space="preserve">已发送</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ScopePinned" xml:space="preserve">固定附件</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ScopeFollowed" xml:space="preserve">跟随差异</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ContextPending" xml:space="preserve">待发送</x:String>
   <x:String x:Key="Text.AI.Sidebar.Limit" xml:space="preserve">上下文达到上限，其余差异未发送</x:String>
   <x:String x:Key="Text.AI.Sidebar.Omitted" xml:space="preserve">已省略</x:String>
   <x:String x:Key="Text.AI.Sidebar.Statistics" xml:space="preserve">本轮 {0}/{1} 个文件 · {2}/{3} 字符 · 截断 {4} 个 · 省略 {5} 个</x:String>
   <x:String x:Key="Text.AI.Sidebar.PreparingContext" xml:space="preserve">正在读取差异并统计上下文...</x:String>
   <x:String x:Key="Text.AI.Sidebar.Retry" xml:space="preserve">重试</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageWaiting" xml:space="preserve">等待模型回答</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageReceiving" xml:space="preserve">正在接收回答</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageTool" xml:space="preserve">正在执行 {0}</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageCompleted" xml:space="preserve">回答完成</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageFailed" xml:space="preserve">请求失败</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolRunning" xml:space="preserve">运行中</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolCompleted" xml:space="preserve">已完成</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolFailed" xml:space="preserve">失败</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolTimedOut" xml:space="preserve">超时</x:String>
+  <x:String x:Key="Text.AI.Tool.Truncated" xml:space="preserve">结果已截断</x:String>
+  <x:String x:Key="Text.AI.Tool.ScopeStatus" xml:space="preserve">工作区状态</x:String>
+  <x:String x:Key="Text.AI.Tool.StatusClean" xml:space="preserve">没有未提交变更</x:String>
+  <x:String x:Key="Text.AI.Tool.Status" xml:space="preserve">已暂存 {0} 项 · 未暂存 {1} 项 · 未跟踪 {2} 项</x:String>
+  <x:String x:Key="Text.AI.Tool.AllFiles" xml:space="preserve">全部文件</x:String>
+  <x:String x:Key="Text.AI.Tool.DiffEmpty" xml:space="preserve">没有文本差异</x:String>
+  <x:String x:Key="Text.AI.Tool.Diff" xml:space="preserve">{0} 个文件 · +{1} -{2}</x:String>
+  <x:String x:Key="Text.AI.Tool.Log" xml:space="preserve">{0} 个提交</x:String>
+  <x:String x:Key="Text.AI.Tool.FromLine" xml:space="preserve">从第 {0} 行</x:String>
+  <x:String x:Key="Text.AI.Tool.Blame" xml:space="preserve">{0} 行 · {1} 个提交</x:String>
+  <x:String x:Key="Text.AI.Tool.NoLines" xml:space="preserve">范围内没有行</x:String>
+  <x:String x:Key="Text.AI.Tool.Lines" xml:space="preserve">第 {0}–{1} 行 · 共 {2} 行</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolCanceled" xml:space="preserve">已取消</x:String>
   <x:String x:Key="Text.AI.Review.Mode.Chat" xml:space="preserve">普通问答</x:String>
   <x:String x:Key="Text.AI.Review.Mode.Bugs" xml:space="preserve">Bug / 回归审查</x:String>
@@ -480,6 +504,30 @@
   <x:String x:Key="Text.AI.Patch.Rejected" xml:space="preserve">已拒绝</x:String>
   <x:String x:Key="Text.AI.Patch.Undone" xml:space="preserve">已撤销</x:String>
   <x:String x:Key="Text.AI.Patch.FailedState" xml:space="preserve">未应用</x:String>
+  <x:String x:Key="Text.AI.Patch.StaleState" xml:space="preserve">已过期</x:String>
+  <x:String x:Key="Text.AI.Patch.Summary" xml:space="preserve">+{0} −{1} · {2} 个区块 · 基线：{3}</x:String>
+  <x:String x:Key="Text.AI.Patch.BaselineReadFile" xml:space="preserve">读取文件时保存</x:String>
+  <x:String x:Key="Text.AI.Patch.BaselineAttachment" xml:space="preserve">发送前附件快照</x:String>
+  <x:String x:Key="Text.AI.Patch.NoBaselineShort" xml:space="preserve">缺失</x:String>
+  <x:String x:Key="Text.AI.Patch.ShowRaw" xml:space="preserve">查看 AI 原始回答</x:String>
+  <x:String x:Key="Text.AI.Review.Severity.Critical" xml:space="preserve">严重</x:String>
+  <x:String x:Key="Text.AI.Review.Severity.High" xml:space="preserve">高</x:String>
+  <x:String x:Key="Text.AI.Review.Severity.Medium" xml:space="preserve">中</x:String>
+  <x:String x:Key="Text.AI.Review.Severity.Low" xml:space="preserve">低</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Unverified" xml:space="preserve">位置未验证</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Locate" xml:space="preserve">定位</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Handled" xml:space="preserve">已处理</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Fix" xml:space="preserve">生成修复补丁</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Problem" xml:space="preserve">问题</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Evidence" xml:space="preserve">证据</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Impact" xml:space="preserve">影响</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Recommendation" xml:space="preserve">建议</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Verification" xml:space="preserve">验证方式</x:String>
+  <x:String x:Key="Text.AI.Review.Card.MoreDetails" xml:space="preserve">证据 / 影响 / 验证方式</x:String>
+  <x:String x:Key="Text.AI.Review.Card.LocationUnavailable" xml:space="preserve">位置未验证，无法跳转。</x:String>
+  <x:String x:Key="Text.AI.Review.Card.NotCurrentDiff" xml:space="preserve">该文件不是当前显示的差异，请先打开对应文件。</x:String>
+  <x:String x:Key="Text.AI.Review.Card.LineNotInDiff" xml:space="preserve">当前差异中没有这个新文件行号，未跳转。</x:String>
+  <x:String x:Key="Text.AI.Review.Card.FixPrompt" xml:space="preserve">请只针对下面这条审查发现生成最小修复补丁，不要修改其他问题。&#10;标题：{0}&#10;位置：{1}&#10;问题：{2}&#10;建议：{3}</x:String>
   <x:String x:Key="Text.AI.Patch.Stale" xml:space="preserve">文件已变化，不能覆盖。请重新读取并生成补丁。</x:String>
   <x:String x:Key="Text.AI.Patch.NoBaseline" xml:space="preserve">缺少生成前工作区基线，只能预览；请让 AI 先读取工作区文件，再生成补丁。</x:String>
   <x:String x:Key="Text.AI.Review.Mode.Patch" xml:space="preserve">生成补丁</x:String>
@@ -487,6 +535,7 @@
   <x:String x:Key="Text.AI.Review.Prompt.Explain" xml:space="preserve">请解释这些变更的目的、行为变化和用户可见影响，并引用已查看的代码。</x:String>
   <x:String x:Key="Text.AI.Review.Prompt.Patch" xml:space="preserve">先读取相关工作区文件，再根据本轮变更提出最小修复补丁。只生成可审阅的 unified diff，不修改文件。</x:String>
   <x:String x:Key="Text.Diff.Welcome" xml:space="preserve">请选择需要对比的文件</x:String>
+  <x:String x:Key="Text.AI.Sidebar.RequestCanceled" xml:space="preserve">已取消本次请求，问题已恢复到输入框。</x:String>
   <x:String x:Key="Text.DirHistories" xml:space="preserve">目录内容变更历史</x:String>
   <x:String x:Key="Text.DirtyState.HasLocalChanges" xml:space="preserve">未提交的本地变更</x:String>
   <x:String x:Key="Text.DirtyState.HasPendingPullOrPush" xml:space="preserve">当前分支HEAD与远端不一致</x:String>

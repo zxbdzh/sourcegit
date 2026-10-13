@@ -18,6 +18,23 @@ namespace SourceGit.ViewModels
         private string _compatibilityNotice;
         public bool ShowReviewMode => ReviewMode != ReviewMode.Chat;
 
+        // 阶段只描述已发生的请求事件，不猜测模型内部推理进度。
+        public string RequestStage { get => _requestStage; set => SetProperty(ref _requestStage, value); }
+        public string EvidenceContext
+        {
+            get => _evidenceContext;
+            set
+            {
+                if (SetProperty(ref _evidenceContext, value))
+                    OnPropertyChanged(nameof(HasEvidence));
+            }
+        }
+        public bool HasEvidence => !string.IsNullOrEmpty(EvidenceContext) || HasToolCalls;
+        // 只列实际调用目标和执行状态；模型结论不作为已验证依据。
+        public string EvidenceSummary => string.Join(Environment.NewLine, ToolCalls.Select(x => $"{x.Name} · {x.Status} · {x.Target}"));
+        private string _requestStage = string.Empty;
+        private string _evidenceContext = string.Empty;
+
         public string Context
         {
             get => _context;
@@ -62,7 +79,44 @@ namespace SourceGit.ViewModels
 
         public bool IsWaiting => IsPending && string.IsNullOrEmpty(_text);
 
-        public bool ShowMarkdown => !IsUser && !IsError && !HasPatches && !string.IsNullOrEmpty(_text);
+        // 有补丁卡片时只显示围栏外的说明，不能整段隐藏有效回答。
+        public string DisplayMarkdown => HasPatches ? AIChatPatch.RemovePatchFences(_text) : HasReviewCards ? _reviewRemainder : _text;
+        public bool ShowMarkdown => !IsUser && !IsError && !string.IsNullOrWhiteSpace(DisplayMarkdown);
+        public bool HasRawResponse => (HasPatches || HasReviewCards) && !string.IsNullOrEmpty(_text);
+
+        // 审查卡片只是已完成回复的结构化视图；解析失败时集合为空，界面继续显示原始 Markdown。
+        public ObservableCollection<AIChatReviewFinding> ReviewFindings { get; } = [];
+        public bool HasReviewCards => ReviewFindings.Count > 0;
+        private string _reviewRemainder = string.Empty;
+
+        public void ClearReview()
+        {
+            ReviewFindings.Clear();
+            _reviewRemainder = string.Empty;
+            NotifyReview();
+        }
+
+        public void PrepareReview()
+        {
+            ClearReview();
+            if (ReviewMode is not (ReviewMode.Bugs or ReviewMode.Security or ReviewMode.Exceptions or ReviewMode.Tests) || HasPatches)
+                return;
+            var result = AIChatReview.Parse(Text);
+            if (result == null)
+                return;
+            foreach (var finding in result.Findings)
+                ReviewFindings.Add(finding);
+            _reviewRemainder = result.Remainder;
+            NotifyReview();
+        }
+
+        private void NotifyReview()
+        {
+            OnPropertyChanged(nameof(HasReviewCards));
+            OnPropertyChanged(nameof(ShowMarkdown));
+            OnPropertyChanged(nameof(DisplayMarkdown));
+            OnPropertyChanged(nameof(HasRawResponse));
+        }
 
         public string Text
         {
@@ -70,7 +124,11 @@ namespace SourceGit.ViewModels
             set
             {
                 if (SetProperty(ref _text, value))
-                    NotifyVisibility();
+                    {
+                        NotifyVisibility();
+                        OnPropertyChanged(nameof(DisplayMarkdown));
+                        OnPropertyChanged(nameof(HasRawResponse));
+                    }
             }
         }
 
@@ -94,6 +152,8 @@ namespace SourceGit.ViewModels
             }
             OnPropertyChanged(nameof(HasPatches));
             OnPropertyChanged(nameof(ShowMarkdown));
+            OnPropertyChanged(nameof(DisplayMarkdown));
+            OnPropertyChanged(nameof(HasRawResponse));
         }
         public ObservableCollection<AIChatToolCall> ToolCalls { get; } = [];
         public bool HasToolCalls => ToolCalls.Count > 0;
@@ -116,6 +176,14 @@ namespace SourceGit.ViewModels
                 return App.Text("AI.Sidebar.ToolSummaryCompleted", ToolCalls.Count, elapsed);
             }
         }
+        public void ResetToolProgress()
+        {
+            ToolCalls.Clear();
+            OnPropertyChanged(nameof(HasToolCalls));
+            OnPropertyChanged(nameof(ToolSummary));
+            OnPropertyChanged(nameof(EvidenceSummary));
+            OnPropertyChanged(nameof(HasEvidence));
+        }
         public void ApplyToolProgress(ToolCallProgress progress)
         {
             var item = ToolCalls.FirstOrDefault(x => x.Id == progress.Id);
@@ -127,6 +195,8 @@ namespace SourceGit.ViewModels
 
             item.Update(progress);
             OnPropertyChanged(nameof(HasToolCalls));
+            OnPropertyChanged(nameof(EvidenceSummary));
+            OnPropertyChanged(nameof(HasEvidence));
             OnPropertyChanged(nameof(ToolSummary));
         }
 
@@ -150,9 +220,32 @@ namespace SourceGit.ViewModels
         public string Id { get; init; }
         public string Name { get; private set; } = string.Empty;
         public string Arguments { get; private set; } = string.Empty;
+        // 依据列表显示可读目标（键: 值），而不是原始 JSON；参数被截断导致无法解析时回退原文。
+        public string Target
+        {
+            get
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(Arguments);
+                    if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                        return Arguments;
+                    var parts = doc.RootElement.EnumerateObject().Select(x => $"{x.Name}: {x.Value}");
+                    var text = string.Join(", ", parts);
+                    return text.Length == 0 ? Arguments : text;
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    return Arguments;
+                }
+            }
+        }
         public string Result { get; private set; } = string.Empty;
         public string Status { get; private set; } = string.Empty;
         public string Elapsed { get; private set; } = string.Empty;
+        public string SummaryScope { get; private set; } = string.Empty;
+        public string SummaryText { get; private set; } = string.Empty;
+        public bool HasSummary => SummaryText.Length > 0;
         public bool IsRunning => _state == ToolCallState.Running;
         public ToolCallState State => _state;
         public TimeSpan Duration => _duration;
@@ -162,6 +255,9 @@ namespace SourceGit.ViewModels
             Name = progress.Name;
             Arguments = progress.Arguments;
             Result = progress.Result;
+            // 摘要仅用于显示，原始结果仍完整保留在 Result 中。
+            SummaryScope = progress.SummaryScope;
+            SummaryText = progress.SummaryText;
             _state = progress.State;
             _duration = progress.Elapsed;
             Status = progress.State switch
@@ -177,7 +273,11 @@ namespace SourceGit.ViewModels
                 ? $"{progress.Elapsed.TotalMilliseconds:0} ms"
                 : $"{progress.Elapsed.TotalSeconds:0.0} s";
             OnPropertyChanged(nameof(Name));
+            OnPropertyChanged(nameof(SummaryScope));
+            OnPropertyChanged(nameof(SummaryText));
+            OnPropertyChanged(nameof(HasSummary));
             OnPropertyChanged(nameof(Arguments));
+            OnPropertyChanged(nameof(Target));
             OnPropertyChanged(nameof(Result));
             OnPropertyChanged(nameof(Status));
             OnPropertyChanged(nameof(Elapsed));

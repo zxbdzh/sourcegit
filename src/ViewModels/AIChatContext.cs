@@ -254,11 +254,37 @@ namespace SourceGit.ViewModels
             get => _contextDetails;
             private set => SetProperty(ref _contextDetails, value);
         }
+        // 与实际请求共用同一次预算计算，详情逐文件显示发送、截断或省略状态。
+        public IReadOnlyList<AIChatContextItem> ContextItems
+        {
+            get => _contextItems;
+            private set
+            {
+                if (SetProperty(ref _contextItems, value))
+                {
+                    OnPropertyChanged(nameof(HasContextItems));
+                    OnPropertyChanged(nameof(ShowEmptyScopeSummary));
+                }
+            }
+        }
+        public bool HasContextItems => _contextItems.Count > 0;
+        public bool IsScopeExpanded { get => _isScopeExpanded; set => SetProperty(ref _isScopeExpanded, value); }
+        private bool _isScopeExpanded;
+        public bool ShowEmptyScopeSummary => !HasContextItems && !IsPreparingContext;
+        private IReadOnlyList<AIChatContextItem> _contextItems = [];
 
         public bool IsPreparingContext
         {
             get => _isPreparingContext;
-            private set => SetProperty(ref _isPreparingContext, value);
+            private set
+            {
+                if (SetProperty(ref _isPreparingContext, value))
+                {
+                    OnPropertyChanged(nameof(ShowEmptyScopeSummary));
+                    // 最后一项移除后关闭详情；临时读取过程不改变用户的展开选择。
+                    if (!value && !HasContextItems) IsScopeExpanded = false;
+                }
+            }
         }
 
         private void ScheduleContextPreview()
@@ -269,6 +295,7 @@ namespace SourceGit.ViewModels
             ContextSummary = App.Text("AI.Sidebar.PreparingContext");
             ContextOverview = ContextSummary;
             ContextDetails = string.Empty;
+            ContextItems = [];
             _previewTimer.Start();
         }
 
@@ -279,14 +306,16 @@ namespace SourceGit.ViewModels
             _previewCancellation = cancellation;
             var followed = FollowedDiffs.ToList();
             var contexts = Attachments.ToList();
+            var pinnedKeys = contexts.Select(x => x.Key).ToHashSet();
             try
             {
                 for (var i = 0; i < followed.Count; i++)
                     contexts.Insert(i, await followed[i].ReadAIContextAsync(cancellation.Token));
                 cancellation.Token.ThrowIfCancellationRequested();
-                var snapshot = AIChatRequestContext.Create(contexts);
+                var snapshot = AIChatRequestContext.Create(contexts, pinnedKeys);
                 ContextSummary = snapshot.Summary;
                 ContextDetails = snapshot.Receipt;
+                ContextItems = snapshot.Items;
                 ContextOverview = snapshot.Overview;
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -428,6 +457,50 @@ namespace SourceGit.ViewModels
             private set => SetProperty(ref _historyNotice, value);
         }
 
+        public void RemoveContextItem(AIChatContextItem item)
+        {
+            if (item == null || IsAIResponding) return;
+            if (item.IsPinned)
+            {
+                var attachment = Attachments.FirstOrDefault(x => x.Key == item.Key);
+                if (attachment != null) RemoveAttachment(attachment);
+            }
+            else
+            {
+                var diff = FollowedDiffs.FirstOrDefault(x => x.Key == item.Key);
+                if (diff != null) RemoveFollowedDiff(diff);
+            }
+        }
+        // 返回可滚动的差异行号；无法验证时写入提示并返回 -1，不猜测跳转。
+        public int ResolveReviewLocation(AIChatReviewFinding finding)
+        {
+            if (finding == null) return -1;
+            finding.LocateMessage = string.Empty;
+            if (!finding.CanLocate)
+            {
+                finding.LocateMessage = App.Text("AI.Review.Card.LocationUnavailable");
+                return -1;
+            }
+            var diff = CurrentDiff;
+            if (diff == null || !string.Equals(diff.AIPath, finding.Path, StringComparison.OrdinalIgnoreCase) || diff.Content is not TextDiffContext ctx)
+            {
+                finding.LocateMessage = App.Text("AI.Review.Card.NotCurrentDiff");
+                return -1;
+            }
+            var line = ctx.FindDisplayLine(finding.LineStart!.Value);
+            if (line < 0)
+                finding.LocateMessage = App.Text("AI.Review.Card.LineNotInDiff");
+            return line;
+        }
+
+        // 修复请求必须由用户点击发起，并走现有的只生成补丁、需预览确认的链路。
+        public async Task RequestReviewFixAsync(AIChatReviewFinding finding)
+        {
+            if (finding == null || !CanUseAI) return;
+            var prompt = App.Text("AI.Review.Card.FixPrompt", finding.Title, finding.LocationText, finding.Problem, finding.Recommendation);
+            await SendAIMessageAsync(prompt, AI.ReviewMode.Patch);
+        }
+
         public void RemoveAttachment(AIChatAttachment attachment) => Attachments.Remove(attachment);
         public void CloseSidebar() => IsExpanded = false;
         public void CancelAIRequest() => _aiCancellation.Cancel();
@@ -493,7 +566,10 @@ namespace SourceGit.ViewModels
             pending.CompatibilityNotice = string.Empty;
             pending.IsError = false;
             pending.IsPending = true;
-            pending.ToolCalls.Clear();
+            pending.RequestStage = App.Text("AI.Sidebar.PreparingContext");
+            pending.EvidenceContext = request.User.Context;
+            pending.ResetToolProgress();
+            pending.ClearReview();
             string latest = null;
             var refresh = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
             // 节流避免每个 token 都重建 Markdown 和语法高亮。
@@ -503,13 +579,25 @@ namespace SourceGit.ViewModels
                     pending.Text = latest;
             };
             refresh.Start();
-            void OnDelta(string text) => latest = text;
+            void OnDelta(string text)
+            {
+                latest = text;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (requestToken == _aiCancellation.Token && !requestToken.IsCancellationRequested && pending.IsPending && !string.IsNullOrEmpty(text))
+                        pending.RequestStage = App.Text("AI.Sidebar.StageReceiving");
+                });
+            }
             void OnToolProgress(AI.ToolCallProgress progress) => Dispatcher.UIThread.Post(() =>
             {
-                if (AIMessages.Contains(pending))
-                    pending.ApplyToolProgress(progress);
+                // 重试复用回复对象，必须同时核对请求代次，不能仅凭消息仍在列表中接收迟到事件。
+                if (requestToken != _aiCancellation.Token || requestToken.IsCancellationRequested || !pending.IsPending || !AIMessages.Contains(pending))
+                    return;
+                pending.ApplyToolProgress(progress);
+                pending.RequestStage = progress.State == AI.ToolCallState.Running
+                    ? App.Text("AI.Sidebar.StageTool", progress.Name)
+                    : App.Text("AI.Sidebar.StageWaiting");
             });
-
             IsAIResponding = true;
             ContextError = string.Empty;
             try
@@ -535,11 +623,16 @@ namespace SourceGit.ViewModels
                 }
 
                 // Agent 会追加工具和回答，只在成功后提交历史；失败重试从原请求副本开始。
+                pending.RequestStage = App.Text("AI.Sidebar.StageWaiting");
+                pending.EvidenceContext = request.User.Context;
                 var messages = new List<ChatMessage>(request.Messages);
                 var answer = await new AI.Agent(request.Service).ChatAsync(messages, OnDelta, _repo, requestToken, OnToolProgress, baseline => request.Baselines.TryAdd(baseline.Path, baseline), notice =>
                 {
-                    if (requestToken == _aiCancellation.Token)
-                        pending.CompatibilityNotice = notice;
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (requestToken == _aiCancellation.Token && !requestToken.IsCancellationRequested && pending.IsPending)
+                            pending.CompatibilityNotice = notice;
+                    });
                 });
                 requestToken.ThrowIfCancellationRequested();
                 if (requestToken != _aiCancellation.Token)
@@ -548,17 +641,19 @@ namespace SourceGit.ViewModels
                 _historyTurns.Add(messages.Skip(request.HistoryCount).ToList());
                 TrimHistory();
                 pending.IsPending = false;
+                pending.RequestStage = App.Text("AI.Sidebar.StageCompleted");
                 pending.Text = answer ?? string.Empty;
+                pending.PrepareReview();
                 pending.PreparePatches(_repo, request.Baselines);
             }
             catch (OperationCanceledException) when (requestToken.IsCancellationRequested)
             {
                 if (requestToken == _aiCancellation.Token)
                 {
-                    AIMessages.Remove(pending);
-                    AIMessages.Remove(request.User);
-                    OnPropertyChanged(nameof(HasAIConversation));
-                    OnPropertyChanged(nameof(ShowEmptyHint));
+                    pending.IsPending = false;
+                    pending.RequestStage = App.Text("AI.Sidebar.ToolCanceled");
+                    // 保留已取消轮次及其依据，但不提交模型历史；迟到事件仍由请求代次隔离。
+                    pending.Text = App.Text("AI.Sidebar.RequestCanceled");
                     if (string.IsNullOrWhiteSpace(AIInput))
                         AIInput = request.Question;
                 }
@@ -568,6 +663,7 @@ namespace SourceGit.ViewModels
                 if (requestToken != _aiCancellation.Token)
                     return;
                 pending.IsPending = false;
+                pending.RequestStage = App.Text("AI.Sidebar.StageFailed");
                 pending.IsError = true;
                 pending.ErrorDetails = e.Message;
                 pending.Text = AI.Agent.IsResponseFormatError(e)

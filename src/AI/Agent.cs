@@ -46,8 +46,18 @@ namespace SourceGit.AI
                     onDelta(log + "\n" + answer);
             }
 
-            for (var round = 0; round < 8; round++)
+            // 工具预算耗尽后保留一次仅总结的请求，避免已读取大量依据却直接丢弃回答。
+            const int toolRoundLimit = 8;
+            for (var round = 0; round <= toolRoundLimit; round++)
             {
+                if (round == toolRoundLimit)
+                {
+                    // 禁止继续查询，只依据已返回的工具结果总结；未完成的检查必须明确说明。
+                    options.Tools.Clear();
+                    options.ToolChoice = ChatToolChoice.CreateNoneChoice();
+                    messages.Add(new SystemChatMessage("The tool execution budget is exhausted. Do not request more tools. Answer using only the evidence already returned, explicitly identify failed or incomplete checks, and suggest a narrower follow-up if needed."));
+                    onCompatibility?.Invoke(App.Text("AI.Sidebar.ToolBudgetSummary"));
+                }
                 answer.Clear();
                 ChatFinishReason? finish = null;
                 var drafts = new Dictionary<int, ToolDraft>();
@@ -126,6 +136,8 @@ namespace SourceGit.AI
 
                 if (finish == ChatFinishReason.ToolCalls || drafts.Count > 0)
                 {
+                    if (round == toolRoundLimit)
+                        throw new InvalidOperationException(App.Text("AI.Sidebar.ToolBudgetRefused"));
                     var calls = new List<ChatToolCall>();
                     foreach (var draft in drafts.Values)
                     {

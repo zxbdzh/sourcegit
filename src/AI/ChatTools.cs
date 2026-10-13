@@ -89,9 +89,12 @@ namespace SourceGit.AI
                 var result = await ProcessAsync(call, repo, null, null, timeout.Token, onBaseline);
                 timeout.Token.ThrowIfCancellationRequested();
                 var text = string.Join("\n", result.Content.Select(x => x.Text));
+                var failed = text.StartsWith("Tool error:", StringComparison.Ordinal);
+                // 摘要必须基于完整结果计算；进度里的展示结果会截断，不能用来计数。
+                var info = failed ? ToolSummary.Empty : ToolResultSummary.Summarize(call.FunctionName, call.FunctionArguments.ToString(), text);
                 progress?.Invoke(new(call.Id, call.FunctionName, arguments,
-                    text.StartsWith("Tool error:", StringComparison.Ordinal) ? ToolCallState.Failed : ToolCallState.Completed,
-                    started.Elapsed, text.Length > 2000 ? text[..2000] + "…" : text));
+                    failed ? ToolCallState.Failed : ToolCallState.Completed,
+                    started.Elapsed, text.Length > 2000 ? text[..2000] + "…" : text, info.Scope, info.Text));
                 return result;
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -176,7 +179,7 @@ namespace SourceGit.AI
             }
 
 
-            var baseline = await ViewModels.AIChatBaseline.CaptureAsync(repo, relative, cancellation);
+            var baseline = await ViewModels.AIChatBaseline.CaptureAsync(repo, relative, cancellation, "ReadFile");
             if (baseline.Original == null)
             {
                 onBaseline?.Invoke(baseline);

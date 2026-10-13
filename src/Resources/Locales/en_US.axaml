@@ -434,7 +434,10 @@
   <x:String x:Key="Text.AI.Sidebar.Mode" xml:space="preserve">Mode</x:String>
   <x:String x:Key="Text.AI.Sidebar.Source" xml:space="preserve">Analysis source</x:String>
   <x:String x:Key="Text.AI.Sidebar.SentContext" xml:space="preserve">Context sent</x:String>
+  <x:String x:Key="Text.AI.Sidebar.Evidence" xml:space="preserve">Evidence for this response</x:String>
   <x:String x:Key="Text.AI.Sidebar.NonStreaming" xml:space="preserve">Incompatible streaming response. Using a complete response; repository tools remain available.</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolBudgetSummary" xml:space="preserve">The 8-round tool budget is exhausted. Summarizing existing evidence and identifying incomplete checks.</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ToolBudgetRefused" xml:space="preserve">Tool queries have stopped, but the model still requested tools. Narrow the question and retry; completed queries remain in the tool log.</x:String>
   <x:String x:Key="Text.AI.Sidebar.ResponseFormatError" xml:space="preserve">The AI service returned an incompatible response, including the complete-response retry. Check OpenAI tool calling support or switch services and retry.</x:String>
   <x:String x:Key="Text.AI.Sidebar.ErrorDetails" xml:space="preserve">Error details</x:String>
   <x:String x:Key="Text.AI.Sidebar.SendScope" xml:space="preserve">This message sends {0} file(s) · {1}/120000 chars</x:String>
@@ -445,15 +448,36 @@
   <x:String x:Key="Text.AI.Sidebar.Unstaged" xml:space="preserve">Index → Working tree · Unstaged</x:String>
   <x:String x:Key="Text.AI.Sidebar.Staged" xml:space="preserve">HEAD → Index · Staged</x:String>
   <x:String x:Key="Text.AI.Sidebar.Truncated" xml:space="preserve">Truncated</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ContextSent" xml:space="preserve">Sent</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ScopePinned" xml:space="preserve">Pinned</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ScopeFollowed" xml:space="preserve">Followed</x:String>
+  <x:String x:Key="Text.AI.Sidebar.ContextPending" xml:space="preserve">Pending</x:String>
   <x:String x:Key="Text.AI.Sidebar.Limit" xml:space="preserve">Context limit reached; remaining diffs were not sent</x:String>
   <x:String x:Key="Text.AI.Sidebar.Omitted" xml:space="preserve">Omitted</x:String>
   <x:String x:Key="Text.AI.Sidebar.Statistics" xml:space="preserve">{0}/{1} files · {2}/{3} chars · {4} truncated · {5} omitted</x:String>
   <x:String x:Key="Text.AI.Sidebar.PreparingContext" xml:space="preserve">Reading diffs and counting context...</x:String>
   <x:String x:Key="Text.AI.Sidebar.Retry" xml:space="preserve">Retry</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageWaiting" xml:space="preserve">Waiting for model response</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageReceiving" xml:space="preserve">Receiving response</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageTool" xml:space="preserve">Running {0}</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageCompleted" xml:space="preserve">Response completed</x:String>
+  <x:String x:Key="Text.AI.Sidebar.StageFailed" xml:space="preserve">Request failed</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolRunning" xml:space="preserve">Running</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolCompleted" xml:space="preserve">Completed</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolFailed" xml:space="preserve">Failed</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolTimedOut" xml:space="preserve">Timed out</x:String>
+  <x:String x:Key="Text.AI.Tool.Truncated" xml:space="preserve">result truncated</x:String>
+  <x:String x:Key="Text.AI.Tool.ScopeStatus" xml:space="preserve">Working tree status</x:String>
+  <x:String x:Key="Text.AI.Tool.StatusClean" xml:space="preserve">No uncommitted changes</x:String>
+  <x:String x:Key="Text.AI.Tool.Status" xml:space="preserve">{0} staged · {1} unstaged · {2} untracked</x:String>
+  <x:String x:Key="Text.AI.Tool.AllFiles" xml:space="preserve">all files</x:String>
+  <x:String x:Key="Text.AI.Tool.DiffEmpty" xml:space="preserve">No text diff</x:String>
+  <x:String x:Key="Text.AI.Tool.Diff" xml:space="preserve">{0} file(s) · +{1} -{2}</x:String>
+  <x:String x:Key="Text.AI.Tool.Log" xml:space="preserve">{0} commit(s)</x:String>
+  <x:String x:Key="Text.AI.Tool.FromLine" xml:space="preserve">from line {0}</x:String>
+  <x:String x:Key="Text.AI.Tool.Blame" xml:space="preserve">{0} line(s) · {1} commit(s)</x:String>
+  <x:String x:Key="Text.AI.Tool.NoLines" xml:space="preserve">No lines in range</x:String>
+  <x:String x:Key="Text.AI.Tool.Lines" xml:space="preserve">lines {0}–{1} · {2} total</x:String>
   <x:String x:Key="Text.AI.Sidebar.ToolCanceled" xml:space="preserve">Canceled</x:String>
   <x:String x:Key="Text.AI.Review.Mode.Chat" xml:space="preserve">Conversation</x:String>
   <x:String x:Key="Text.AI.Review.Mode.Bugs" xml:space="preserve">Bugs / Regressions</x:String>
@@ -476,6 +500,30 @@
   <x:String x:Key="Text.AI.Patch.Rejected" xml:space="preserve">Rejected</x:String>
   <x:String x:Key="Text.AI.Patch.Undone" xml:space="preserve">Undone</x:String>
   <x:String x:Key="Text.AI.Patch.FailedState" xml:space="preserve">Not applied</x:String>
+  <x:String x:Key="Text.AI.Patch.StaleState" xml:space="preserve">Stale</x:String>
+  <x:String x:Key="Text.AI.Patch.Summary" xml:space="preserve">+{0} −{1} · {2} hunk(s) · Baseline: {3}</x:String>
+  <x:String x:Key="Text.AI.Patch.BaselineReadFile" xml:space="preserve">saved by ReadFile</x:String>
+  <x:String x:Key="Text.AI.Patch.BaselineAttachment" xml:space="preserve">pre-send attachment snapshot</x:String>
+  <x:String x:Key="Text.AI.Patch.NoBaselineShort" xml:space="preserve">missing</x:String>
+  <x:String x:Key="Text.AI.Patch.ShowRaw" xml:space="preserve">View raw AI response</x:String>
+  <x:String x:Key="Text.AI.Review.Severity.Critical" xml:space="preserve">Critical</x:String>
+  <x:String x:Key="Text.AI.Review.Severity.High" xml:space="preserve">High</x:String>
+  <x:String x:Key="Text.AI.Review.Severity.Medium" xml:space="preserve">Medium</x:String>
+  <x:String x:Key="Text.AI.Review.Severity.Low" xml:space="preserve">Low</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Unverified" xml:space="preserve">location not verified</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Locate" xml:space="preserve">Locate</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Handled" xml:space="preserve">Handled</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Fix" xml:space="preserve">Generate fix patch</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Problem" xml:space="preserve">Problem</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Evidence" xml:space="preserve">Evidence</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Impact" xml:space="preserve">Impact</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Recommendation" xml:space="preserve">Recommendation</x:String>
+  <x:String x:Key="Text.AI.Review.Card.Verification" xml:space="preserve">Verification</x:String>
+  <x:String x:Key="Text.AI.Review.Card.MoreDetails" xml:space="preserve">Evidence / impact / verification</x:String>
+  <x:String x:Key="Text.AI.Review.Card.LocationUnavailable" xml:space="preserve">Location is not verified; cannot navigate.</x:String>
+  <x:String x:Key="Text.AI.Review.Card.NotCurrentDiff" xml:space="preserve">That file is not the current diff. Open it first.</x:String>
+  <x:String x:Key="Text.AI.Review.Card.LineNotInDiff" xml:space="preserve">This new-file line is not in the current diff; no jump was made.</x:String>
+  <x:String x:Key="Text.AI.Review.Card.FixPrompt" xml:space="preserve">Generate a minimal fix patch for ONLY this review finding; do not change other issues.&#10;Title: {0}&#10;Location: {1}&#10;Problem: {2}&#10;Recommendation: {3}</x:String>
   <x:String x:Key="Text.AI.Patch.Stale" xml:space="preserve">File changed. Refusing to overwrite; read it again and regenerate the patch.</x:String>
   <x:String x:Key="Text.AI.Patch.NoBaseline" xml:space="preserve">No working-tree baseline captured before generation. Preview only; ask AI to read the working file and regenerate.</x:String>
   <x:String x:Key="Text.AI.Review.Mode.Patch" xml:space="preserve">Generate patch</x:String>
@@ -483,6 +531,7 @@
   <x:String x:Key="Text.AI.Review.Prompt.Explain" xml:space="preserve">Explain the intent and user-visible impact of these changes, citing the inspected code.</x:String>
   <x:String x:Key="Text.AI.Review.Prompt.Patch" xml:space="preserve">Read related working-tree files first and propose a minimal fix for these changes as a reviewable unified diff. Do not modify files.</x:String>
   <x:String x:Key="Text.Diff.Welcome" xml:space="preserve">SELECT FILE TO VIEW CHANGES</x:String>
+  <x:String x:Key="Text.AI.Sidebar.RequestCanceled" xml:space="preserve">Request canceled. Your question was restored to the input box.</x:String>
   <x:String x:Key="Text.DirHistories" xml:space="preserve">Dir History</x:String>
   <x:String x:Key="Text.DirtyState.HasLocalChanges" xml:space="preserve">Has Local Changes</x:String>
   <x:String x:Key="Text.DirtyState.HasPendingPullOrPush" xml:space="preserve">Mismatched with Upstream</x:String>

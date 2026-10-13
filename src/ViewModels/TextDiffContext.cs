@@ -123,6 +123,20 @@ namespace SourceGit.ViewModels
             return false;
         }
 
+        // 审查定位只接受当前 diff 中真实存在的新文件行号；找不到时返回 -1，调用方必须提示而不是猜测跳转。
+        public virtual int FindDisplayLine(int newLineNumber)
+        {
+            if (newLineNumber <= 0 || _data == null)
+                return -1;
+            for (var i = 0; i < _data.Lines.Count; i++)
+            {
+                var line = _data.Lines[i];
+                if (line.NewLineNumber == newLineNumber && line.Type != Models.TextDiffLineType.Deleted)
+                    return i + 1;
+            }
+            return -1;
+        }
+
         public virtual TextDiffContext SwitchMode()
         {
             return null;
@@ -214,6 +228,18 @@ namespace SourceGit.ViewModels
         public override bool IsSideBySide()
         {
             return true;
+        }
+
+        public override int FindDisplayLine(int newLineNumber)
+        {
+            if (newLineNumber <= 0)
+                return -1;
+            for (var i = 0; i < New.Count; i++)
+            {
+                if (New[i].NewLineNumber == newLineNumber)
+                    return i + 1;
+            }
+            return -1;
         }
 
         public override TextDiffContext SwitchMode()

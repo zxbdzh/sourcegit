@@ -1,3 +1,6 @@
+using System.Linq;
+using Avalonia.VisualTree;
+using Avalonia.LogicalTree;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -48,6 +51,38 @@ namespace SourceGit.Views
                 await vm.AddCurrentDiffAsync();
         }
 
+        private void OnLocateReviewFinding(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (sender is not Button { DataContext: ViewModels.AIChatReviewFinding finding } || DataContext is not ViewModels.AIChatContext vm)
+                return;
+            var line = vm.ResolveReviewLocation(finding);
+            if (line < 0)
+                return;
+            var presenter = this.FindAncestorOfType<Repository>()?.GetVisualDescendants().OfType<ThemedTextDiffPresenter>()
+                .FirstOrDefault(x => x.IsEffectivelyVisible && !x.IsOld);
+            if (presenter == null)
+            {
+                finding.LocateMessage = App.Text("AI.Review.Card.NotCurrentDiff");
+                return;
+            }
+            presenter.TextArea.Caret.Line = line;
+            presenter.ScrollToLine(line);
+        }
+
+        private async void OnFixReviewFinding(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (sender is Button { DataContext: ViewModels.AIChatReviewFinding finding } && DataContext is ViewModels.AIChatContext vm)
+                await vm.RequestReviewFixAsync(finding);
+        }
+
+        private void OnRemoveContextItem(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (sender is Button { DataContext: ViewModels.AIChatContextItem item } && DataContext is ViewModels.AIChatContext vm)
+                vm.RemoveContextItem(item);
+        }
         private void OnRemoveFollowedDiff(object sender, RoutedEventArgs e)
         {
             e.Handled = true;

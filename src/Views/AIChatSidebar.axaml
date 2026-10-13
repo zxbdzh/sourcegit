@@ -72,7 +72,7 @@
                     <TextBlock Text="{Binding ModeLabel}" IsVisible="{Binding ShowReviewMode}" FontSize="12" Foreground="{DynamicResource Brush.FG2}"/>
                     <v:LoadingIcon Width="12" Height="12" IsVisible="{Binding IsPending}"/>
                   </StackPanel>
-                  <TextBlock Text="{DynamicResource Text.Diff.AI.Thinking}" TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource Brush.FG2}" IsVisible="{Binding IsWaiting}"/>
+                  <TextBlock Text="{Binding RequestStage}" TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource Brush.FG2}"/>
                   <TextBlock Text="{Binding CompatibilityNotice}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Brush.FG2}"
                              IsVisible="{Binding CompatibilityNotice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                   <Border Background="{DynamicResource Brush.Diff.DeletedBG}" BorderBrush="{DynamicResource Brush.Border0}" BorderThickness="1" CornerRadius="4" Padding="10,8" IsVisible="{Binding IsError}">
@@ -85,6 +85,16 @@
                       </Expander>
                     </StackPanel>
                   </Border>
+                  <Expander x:Name="RequestEvidence" Header="{DynamicResource Text.AI.Sidebar.Evidence}" IsExpanded="False"
+                            IsVisible="{Binding HasEvidence}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                    <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                      <StackPanel Spacing="6">
+                        <SelectableTextBlock Text="{Binding EvidenceContext}" FontSize="12" LineHeight="18" TextWrapping="Wrap"/>
+                        <SelectableTextBlock Text="{Binding EvidenceSummary}" FontSize="12" LineHeight="18" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </ScrollViewer>
+                  </Expander>
                   <Expander IsVisible="{Binding HasToolCalls}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                     <Expander.Header><TextBlock Text="{Binding ToolSummary}" FontSize="12" TextWrapping="Wrap"/></Expander.Header>
                     <!-- 工具轨迹独立滚动，避免多次搜索把分析结论挤出视口。 -->
@@ -100,7 +110,10 @@
                                   <TextBlock Text="{Binding Status}" FontSize="12" Foreground="{DynamicResource Brush.FG2}"/>
                                   <TextBlock Text="{Binding Elapsed}" FontSize="12" Foreground="{DynamicResource Brush.FG2}"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding Arguments}" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="260"
+                                <TextBlock Text="{Binding SummaryScope}" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="320" IsVisible="{Binding HasSummary}"
+                                           Foreground="{DynamicResource Brush.FG2}" ToolTip.Tip="{Binding SummaryScope}"/>
+                                <TextBlock Text="{Binding SummaryText}" FontSize="12" TextWrapping="Wrap" MaxWidth="320" IsVisible="{Binding HasSummary}"/>
+                                <TextBlock Text="{Binding Target}" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="260" IsVisible="{Binding !HasSummary}"
                                            Foreground="{DynamicResource Brush.FG2}" ToolTip.Tip="{Binding Arguments}"/>
                               </StackPanel>
                             </Expander.Header>
@@ -127,8 +140,9 @@
                             <StackPanel Spacing="8">
                               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                 <TextBlock Text="{Binding Path}" FontWeight="Bold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="12" Foreground="{DynamicResource Brush.FG2}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Status}" x:Name="PatchStatus" FontSize="12" Foreground="{DynamicResource Brush.FG2}" VerticalAlignment="Center"/>
                               </Grid>
+                              <TextBlock Text="{Binding Summary}" FontSize="12" Foreground="{DynamicResource Brush.FG2}" TextWrapping="Wrap"/>
                               <TextBlock Text="{DynamicResource Text.AI.Patch.NoBaseline}" IsVisible="{Binding !HasBaseline}" TextWrapping="Wrap" FontSize="11"/>
                               <ItemsControl ItemsSource="{Binding Hunks}">
                                 <ItemsControl.ItemTemplate>
@@ -169,7 +183,8 @@
                                 <Button Classes="flat" Height="32" FontSize="13" Padding="12,0" Margin="0,4,0,0"
                                         Content="{DynamicResource Text.AI.Patch.Undo}" IsVisible="{Binding CanUndo}" IsEnabled="{Binding CanUndo}" Click="OnUndoPatch"/>
                               </WrapPanel>
-                              <TextBlock Text="{Binding Message}" Foreground="OrangeRed" FontSize="13" TextWrapping="Wrap"/>
+                              <TextBlock Text="{Binding Message}" Foreground="OrangeRed" FontSize="13" TextWrapping="Wrap"
+                                         IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             </StackPanel>
                           </Border>
                         </DataTemplate>
@@ -177,7 +192,38 @@
                     </ItemsControl>
                   </StackPanel>
                   <TextBlock Text="{Binding PatchError}" Foreground="OrangeRed" TextWrapping="Wrap" FontSize="11"/>
-                  <v:MarkdownView Markdown="{Binding Text}" IsVisible="{Binding ShowMarkdown}"/>
+                  <ItemsControl ItemsSource="{Binding ReviewFindings}" IsVisible="{Binding HasReviewCards}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="vm:AIChatReviewFinding">
+                        <Border BorderThickness="1" BorderBrush="{DynamicResource Brush.Border0}" Padding="10" Margin="0,0,0,6" CornerRadius="4">
+                          <StackPanel Spacing="4">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                              <TextBlock Text="{Binding SeverityLabel}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center"/>
+                              <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap"/>
+                              <CheckBox Grid.Column="2" Content="{DynamicResource Text.AI.Review.Card.Handled}" FontSize="12" MinHeight="24" IsChecked="{Binding IsHandled, Mode=TwoWay}"/>
+                            </Grid>
+                            <TextBlock Text="{Binding LocationLabel}" FontSize="12" FontFamily="{DynamicResource Fonts.Monospace}" Foreground="{DynamicResource Brush.FG2}" TextWrapping="Wrap"/>
+                            <SelectableTextBlock Text="{Binding Problem}" FontSize="13" LineHeight="20" TextWrapping="Wrap"/>
+                            <SelectableTextBlock Text="{Binding Recommendation}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Foreground="{DynamicResource Brush.FG2}" IsVisible="{Binding HasRecommendation}"/>
+                            <Expander Header="{DynamicResource Text.AI.Review.Card.MoreDetails}" IsVisible="{Binding HasMoreDetails}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                              <SelectableTextBlock Text="{Binding MoreDetails}" FontSize="12" LineHeight="18" TextWrapping="Wrap"/>
+                            </Expander>
+                            <WrapPanel>
+                              <Button Classes="flat" Height="32" Padding="12,0" Margin="0,2,8,0" FontSize="13" Content="{DynamicResource Text.AI.Review.Card.Locate}" Click="OnLocateReviewFinding"/>
+                              <Button Classes="flat" Height="32" Padding="12,0" Margin="0,2,0,0" FontSize="13" Content="{DynamicResource Text.AI.Review.Card.Fix}" Click="OnFixReviewFinding"/>
+                            </WrapPanel>
+                            <TextBlock Text="{Binding LocateMessage}" Foreground="OrangeRed" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding HasLocateMessage}"/>
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <v:MarkdownView Markdown="{Binding DisplayMarkdown}" IsVisible="{Binding ShowMarkdown}"/>
+                  <Expander Header="{DynamicResource Text.AI.Patch.ShowRaw}" IsVisible="{Binding HasRawResponse}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                    <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                      <SelectableTextBlock Text="{Binding Text}" FontSize="12" LineHeight="18" TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                  </Expander>
                 </StackPanel>
               </Grid>
             </DataTemplate>
@@ -186,9 +232,34 @@
       </Panel>
     </ScrollViewer>
 
-    <ScrollViewer Grid.Row="4" MaxHeight="64" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer Grid.Row="4" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
       <StackPanel Margin="10,8,10,0" Spacing="4">
-        <TextBlock Text="{Binding ContextOverview}" IsVisible="{Binding !IsPreparingContext}" FontSize="12" Foreground="{DynamicResource Brush.FG2}" TextWrapping="Wrap" ToolTip.Tip="{Binding ContextDetails}"/>
+        <!-- 发送范围默认只占一行；展开后逐文件显示来源与截断/省略，列表内部滚动。 -->
+        <Expander x:Name="SendScopeDetails" IsVisible="{Binding HasContextItems}" IsExpanded="{Binding IsScopeExpanded, Mode=TwoWay}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0">
+          <Expander.Header>
+            <TextBlock Text="{Binding ContextOverview}" FontSize="12" Foreground="{DynamicResource Brush.FG2}" TextWrapping="Wrap"/>
+          </Expander.Header>
+          <ScrollViewer MaxHeight="132" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding ContextItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:AIChatContextItem">
+                  <Grid Height="44" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                    <TextBlock Text="{Binding DisplayName}" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding DetailTip}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding PreviewState}" FontSize="12" Foreground="{DynamicResource Brush.FG2}" VerticalAlignment="Center"/>
+                    <Button Grid.Column="2" Grid.RowSpan="2" Classes="icon_button" Width="24" IsEnabled="{Binding $parent[v:AIChatSidebar].((vm:AIChatContext)DataContext).CanUseAI}" Click="OnRemoveContextItem" ToolTip.Tip="{DynamicResource Text.AI.Sidebar.Remove}">
+                      <Path Width="10" Height="10" Data="{StaticResource Icons.Close}"/>
+                    </Button>
+                    <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                      <TextBlock Text="{Binding Kind}" FontSize="11" Foreground="{DynamicResource Brush.FG2}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Source}" FontSize="11" Foreground="{DynamicResource Brush.FG2}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FullSource}"/>
+                    </Grid>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Expander>
+        <TextBlock Text="{Binding ContextOverview}" IsVisible="{Binding ShowEmptyScopeSummary}" FontSize="12" Foreground="{DynamicResource Brush.FG2}" TextWrapping="Wrap" ToolTip.Tip="{Binding ContextDetails}"/>
         <TextBlock Text="{Binding ContextError}" TextWrapping="Wrap" Foreground="OrangeRed" FontSize="11" IsVisible="{Binding ContextError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         <TextBlock Text="{Binding HistoryNotice}" FontSize="11" Foreground="{DynamicResource Brush.FG2}" TextWrapping="Wrap" IsVisible="{Binding HistoryNotice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
       </StackPanel>

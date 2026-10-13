@@ -14,17 +14,19 @@ namespace SourceGit.ViewModels
     {
         public string Path { get; init; }
         public byte[] Original { get; init; }
+        // 基线来自模型实际看到的哪条路径：ReadFile 工具或发送前冻结的附件，仅用于展示。
+        public string Source { get; init; }
 
-        public static async Task<AIChatBaseline> CaptureAsync(string repo, string path, CancellationToken cancellation)
+        public static async Task<AIChatBaseline> CaptureAsync(string repo, string path, CancellationToken cancellation, string source = "Attachment")
         {
             var full = AI.ChatTools.ResolveRepoPath(repo, path);
             if (Directory.Exists(full)) throw new IOException("A file path is required.");
-            if (!File.Exists(full)) return new() { Path = path };
+            if (!File.Exists(full)) return new() { Path = path, Source = source };
             await using var stream = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
             if (stream.Length > 8 * 1024 * 1024) throw new IOException("Patch baseline exceeds 8 MiB.");
             using var buffer = new MemoryStream();
             await stream.CopyToAsync(buffer, cancellation);
-            return new() { Path = path, Original = buffer.ToArray() };
+            return new() { Path = path, Original = buffer.ToArray(), Source = source };
         }
     }
 
@@ -60,6 +62,13 @@ namespace SourceGit.ViewModels
         public string Status { get => _status; private set => SetProperty(ref _status, value); }
         public string Message { get => _message; private set => SetProperty(ref _message, value); }
         public bool HasBaseline => Baseline != null;
+        // 摘要只统计模型提出的 diff 行，不代表补丁已验证可应用。
+        public int AddedLines => Hunks.Sum(h => h.Lines.Count(l => l.StartsWith('+')));
+        public int RemovedLines => Hunks.Sum(h => h.Lines.Count(l => l.StartsWith('-')));
+        public string BaselineLabel => Baseline == null
+            ? App.Text("AI.Patch.NoBaselineShort")
+            : App.Text(Baseline.Source == "ReadFile" ? "AI.Patch.BaselineReadFile" : "AI.Patch.BaselineAttachment");
+        public string Summary => App.Text("AI.Patch.Summary", AddedLines, RemovedLines, Hunks.Count, BaselineLabel);
         public bool CanApply => !_applied && !_rejected && !_busy && Baseline != null;
         public bool CanUndo => _applied && !_busy;
         public bool CanReject => !_applied && !_rejected && !_busy;
@@ -98,7 +107,8 @@ namespace SourceGit.ViewModels
             catch (Exception error) when (error is IOException or ArgumentException or UnauthorizedAccessException or InvalidOperationException)
             {
                 Message = error.Message;
-                Status = App.Text("AI.Patch.FailedState");
+                // 基线变化是独立的过期状态，用户需要重新生成补丁，不能与普通失败混在一起。
+                Status = error.Message == App.Text("AI.Patch.Stale") ? App.Text("AI.Patch.StaleState") : App.Text("AI.Patch.FailedState");
                 return false;
             }
             finally { _busy = false; NotifyActions(); }
@@ -231,6 +241,8 @@ namespace SourceGit.ViewModels
         [GeneratedRegex(@"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")]
         private static partial Regex Header();
 
+        // 补丁卡片接管 diff 代码块；围栏外的解释、警告和验证建议必须原样保留。
+        public static string RemovePatchFences(string reply) => Fence().Replace(reply ?? string.Empty, string.Empty).Trim();
         public static List<AIChatPatchFile> Parse(string reply, string repo, IReadOnlyDictionary<string, AIChatBaseline> baselines)
         {
             var result = new List<AIChatPatchFile>();
